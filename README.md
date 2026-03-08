@@ -22,13 +22,10 @@ A locally running, always-on voice assistant with a web interface. All processin
 # 1. Install everything (auto-installs Homebrew, Python, ffmpeg, Ollama if needed)
 ./setup.sh
 
-# 2. Start Ollama (if not already running)
-ollama serve
-
-# 3. Run the app
+# 2. Run the app (starts Ollama automatically)
 ./run.sh
 
-# 4. Open in browser
+# 3. Open in browser
 open http://localhost:8765
 ```
 
@@ -198,7 +195,7 @@ python3 whisper_ollama.py -m qwen3.5:4b
 ## Troubleshooting
 
 **"Cannot connect to Ollama"**
-Ollama isn't running. Start it with `ollama serve`.
+Ollama isn't running. `run.sh` starts it automatically, but you can also start it manually with `ollama serve`.
 
 **No audio / microphone not working**
 The browser needs microphone permission. Click the mic button and allow access when prompted. Only works on `localhost` or HTTPS.
