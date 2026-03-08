@@ -11,10 +11,24 @@ echo "=== Hermit Crab Setup ==="
 echo ""
 
 # --- 1. Check Python ---
+install_python() {
+    echo "[!] Python 3.10+ is required. Installing via Homebrew..."
+    if ! command -v brew &>/dev/null; then
+        echo "[!] Homebrew not found. Installing Homebrew first..."
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv 2>/dev/null)"
+    fi
+    brew install python@3.12
+    export PATH="$(brew --prefix python@3.12)/libexec/bin:$(brew --prefix)/bin:$PATH"
+}
+
 if ! command -v python3 &>/dev/null; then
-    echo "ERROR: python3 not found. Install Python 3.10+ first."
-    echo "  brew install python@3.12"
-    exit 1
+    install_python
+fi
+PY_MINOR=$(python3 -c "import sys; print(sys.version_info.minor)")
+if [ "$PY_MINOR" -lt 10 ]; then
+    echo "[!] Found $(python3 --version), but 3.10+ is required."
+    install_python
 fi
 echo "[OK] Python: $(python3 --version)"
 
@@ -39,8 +53,14 @@ else
     echo "[OK] Ollama: $(ollama --version 2>&1)"
 fi
 
-# --- 4. Install Python packages ---
+# --- 4. Create virtual environment and install packages ---
 echo ""
+if [ ! -d ".venv" ]; then
+    echo "Creating virtual environment..."
+    python3 -m venv .venv
+fi
+source .venv/bin/activate
+echo "[OK] venv: .venv ($(python3 --version))"
 echo "Installing Python dependencies..."
 pip install -r requirements.txt
 
@@ -63,5 +83,5 @@ echo "=== Setup complete ==="
 echo ""
 echo "To run Hermit Crab:"
 echo "  1. Start Ollama (if not running):  ollama serve"
-echo "  2. Start the app:                  python3 app.py"
+echo "  2. Start the app:                  ./run.sh"
 echo "  3. Open browser:                   http://localhost:8765"

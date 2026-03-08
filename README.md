@@ -19,14 +19,14 @@ A locally running, always-on voice assistant with a web interface. All processin
 ## Quick Start
 
 ```bash
-# 1. Install everything
+# 1. Install everything (auto-installs Homebrew, Python, ffmpeg, Ollama if needed)
 ./setup.sh
 
 # 2. Start Ollama (if not already running)
 ollama serve
 
 # 3. Run the app
-python3 app.py
+./run.sh
 
 # 4. Open in browser
 open http://localhost:8765
@@ -56,7 +56,8 @@ hermit_crab/
   static/index.html   # Web UI — chat interface, audio capture, VAD
   whisper_ollama.py   # CLI version (standalone, no web UI)
   requirements.txt    # Python dependencies
-  setup.sh            # One-step install script
+  setup.sh            # One-step install script (creates .venv automatically)
+  run.sh              # Start the app (activates venv and runs app.py)
 ```
 
 ## How It Works
