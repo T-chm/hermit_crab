@@ -129,9 +129,17 @@ Ask the assistant to control your music with natural language:
 | Artist info | "What albums do I have by Radiohead?" |
 | Album info | "What tracks are on OK Computer?" |
 
-**Apple Music**: Full support — play, pause, skip, search library, browse artists/albums.
+**Apple Music**: Full support via AppleScript — play, pause, skip, search library, browse artists/albums.
 
-**Spotify**: Basic transport controls (play, pause, next, previous). Library search is not available via AppleScript — use the Spotify app for search.
+**Spotify**: Full support via [spogo](https://github.com/steipete/spogo) CLI — play, pause, skip, search, browse library, play by artist/album/song. Requires Spotify Premium.
+
+```bash
+# Install spogo for Spotify support
+brew install steipete/tap/spogo
+spogo auth import --browser chrome
+```
+
+Without spogo installed, Spotify commands will prompt you to install it.
 
 ### Other Controls
 
@@ -260,3 +268,6 @@ Increase the sensitivity slider (higher = less sensitive). Move the threshold to
 
 **Music control not working**
 Make sure Apple Music or Spotify is open. On first use, macOS may prompt you to allow Terminal/Python to control the app — click Allow.
+
+**Spotify says "spogo required"**
+Install spogo: `brew install steipete/tap/spogo && spogo auth import --browser chrome`. Requires Spotify Premium.

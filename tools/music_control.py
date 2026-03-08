@@ -1,6 +1,10 @@
-"""Music control — Apple Music and Spotify playback via AppleScript."""
+"""Music control — Apple Music (AppleScript) and Spotify (spogo CLI)."""
 
+import json as _json
+import shutil
 import subprocess
+
+HAS_SPOGO = shutil.which("spogo") is not None
 
 DEFINITION = {
     "type": "function",
@@ -56,7 +60,7 @@ DEFINITION = {
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# AppleScript helpers (Apple Music)
 # ---------------------------------------------------------------------------
 def _applescript(script: str, timeout: int = 15) -> str:
     """Run an AppleScript via osascript and return output."""
@@ -69,130 +73,266 @@ def _applescript(script: str, timeout: int = 15) -> str:
     return r.stdout.strip()
 
 
-def _music_app_name(app: str) -> str:
-    return "Spotify" if app == "spotify" else "Music"
+# ---------------------------------------------------------------------------
+# spogo helpers (Spotify)
+# ---------------------------------------------------------------------------
+def _spogo(args: list, timeout: int = 15) -> str:
+    """Run a spogo CLI command and return output."""
+    r = subprocess.run(
+        ["spogo"] + args,
+        capture_output=True, text=True, timeout=timeout,
+    )
+    if r.returncode != 0:
+        return f"Error: {r.stderr.strip()}"
+    return r.stdout.strip()
+
+
+def _spogo_json(args: list, timeout: int = 15):
+    """Run a spogo command with --json and parse the output."""
+    out = _spogo(args + ["--json"], timeout=timeout)
+    if out.startswith("Error"):
+        return None
+    try:
+        return _json.loads(out)
+    except (_json.JSONDecodeError, ValueError):
+        return None
+
+
+def _spotify_no_spogo():
+    return (
+        "Spotify requires the spogo CLI for full control. "
+        "Install it with: brew install steipete/tap/spogo && spogo auth import --browser chrome"
+    )
 
 
 # ---------------------------------------------------------------------------
-# Execute
+# Spotify actions via spogo
 # ---------------------------------------------------------------------------
-def execute(args: dict) -> str:
-    """Execute a music control action and return a result string."""
-    action = args.get("action", "")
-    app = args.get("app", "apple_music")
-    query = args.get("query", "")
-    artist = args.get("artist", "")
-    app_name = _music_app_name(app)
+def _spotify_execute(action: str, query: str, artist: str) -> str:
+    """Handle all Spotify actions via spogo CLI."""
+    if not HAS_SPOGO:
+        return _spotify_no_spogo()
 
-    # Escape single quotes
+    if action == "play":
+        _spogo(["play"])
+        return "Resumed playback on Spotify."
+
+    elif action == "pause":
+        _spogo(["pause"])
+        return "Paused Spotify."
+
+    elif action == "next":
+        _spogo(["next"])
+        return "Skipped to next track on Spotify."
+
+    elif action == "previous":
+        _spogo(["prev"])
+        return "Went to previous track on Spotify."
+
+    elif action == "current_track":
+        result = _spogo(["status", "--plain"])
+        if result.startswith("Error"):
+            return "No track is currently playing on Spotify."
+        return f"Now playing on Spotify: {result}"
+
+    elif action == "play_song" and query:
+        search_query = f"{query} {artist}".strip() if artist else query
+        data = _spogo_json(["search", "track", search_query, "--limit", "5"])
+        if not data:
+            return f"No results for '{search_query}' on Spotify."
+        # data is a list of track objects; find best match
+        tracks = data if isinstance(data, list) else data.get("tracks", data.get("items", []))
+        if not tracks:
+            return f"No results for '{search_query}' on Spotify."
+        # If artist specified, try to match
+        picked = tracks[0]
+        if artist:
+            for t in tracks:
+                t_artists = ""
+                if isinstance(t.get("artists"), list):
+                    t_artists = " ".join(a.get("name", "") for a in t["artists"])
+                elif isinstance(t.get("artist"), str):
+                    t_artists = t["artist"]
+                if artist.lower() in t_artists.lower():
+                    picked = t
+                    break
+        uri = picked.get("uri") or picked.get("id", "")
+        name = picked.get("name", query)
+        _spogo(["play", uri])
+        return f"Now playing on Spotify: {name}"
+
+    elif action == "play_artist" and query:
+        data = _spogo_json(["search", "artist", query, "--limit", "1"])
+        if not data:
+            return f"Could not find artist '{query}' on Spotify."
+        artists = data if isinstance(data, list) else data.get("artists", data.get("items", []))
+        if not artists:
+            return f"Could not find artist '{query}' on Spotify."
+        uri = artists[0].get("uri") or artists[0].get("id", "")
+        name = artists[0].get("name", query)
+        _spogo(["play", uri, "--type", "artist", "--shuffle"])
+        return f"Playing {name} on Spotify (shuffled)."
+
+    elif action == "play_album" and query:
+        data = _spogo_json(["search", "album", query, "--limit", "1"])
+        if not data:
+            return f"Could not find album '{query}' on Spotify."
+        albums = data if isinstance(data, list) else data.get("albums", data.get("items", []))
+        if not albums:
+            return f"Could not find album '{query}' on Spotify."
+        uri = albums[0].get("uri") or albums[0].get("id", "")
+        name = albums[0].get("name", query)
+        _spogo(["play", uri, "--type", "album"])
+        return f"Playing album '{name}' on Spotify."
+
+    elif action == "search" and query:
+        result = _spogo(["search", "track", query, "--limit", "15", "--plain"])
+        if result.startswith("Error") or not result:
+            return f"No results for '{query}' on Spotify."
+        return f"Spotify search results for '{query}':\n{result}"
+
+    elif action == "artist_info" and query:
+        data = _spogo_json(["search", "artist", query, "--limit", "1"])
+        if not data:
+            return f"Could not find artist '{query}' on Spotify."
+        artists = data if isinstance(data, list) else data.get("artists", data.get("items", []))
+        if not artists:
+            return f"Could not find artist '{query}' on Spotify."
+        artist_id = artists[0].get("id") or artists[0].get("uri", "")
+        name = artists[0].get("name", query)
+        info = _spogo(["artist", "info", artist_id, "--plain"])
+        if info.startswith("Error"):
+            return f"Found {name} but could not fetch details."
+        return info
+
+    elif action == "album_info" and query:
+        data = _spogo_json(["search", "album", query, "--limit", "1"])
+        if not data:
+            return f"Could not find album '{query}' on Spotify."
+        albums = data if isinstance(data, list) else data.get("albums", data.get("items", []))
+        if not albums:
+            return f"Could not find album '{query}' on Spotify."
+        album_id = albums[0].get("id") or albums[0].get("uri", "")
+        info = _spogo(["album", "info", album_id, "--plain"])
+        if info.startswith("Error"):
+            name = albums[0].get("name", query)
+            return f"Found '{name}' but could not fetch details."
+        return info
+
+    elif action == "list_artists":
+        result = _spogo(["library", "artists", "--limit", "50", "--plain"], timeout=30)
+        if result.startswith("Error") or not result:
+            return "Could not read your Spotify library."
+        return f"Artists in your Spotify library:\n{result}"
+
+    elif action == "list_albums":
+        result = _spogo(["library", "albums", "--limit", "50", "--plain"], timeout=30)
+        if result.startswith("Error") or not result:
+            return "Could not read your Spotify library."
+        return f"Albums in your Spotify library:\n{result}"
+
+    return f"Unknown action: {action}"
+
+
+# ---------------------------------------------------------------------------
+# Apple Music actions via AppleScript
+# ---------------------------------------------------------------------------
+def _apple_music_execute(action: str, query: str, artist: str) -> str:
+    """Handle all Apple Music actions via AppleScript."""
     safe_query = query.replace("'", "'\\''") if query else ""
     safe_artist = artist.replace("'", "'\\''") if artist else ""
 
     if action == "play":
-        _applescript(f'tell application "{app_name}" to play')
-        return f"Resumed playback on {app_name}."
+        _applescript('tell application "Music" to play')
+        return "Resumed playback on Apple Music."
 
     elif action == "pause":
-        _applescript(f'tell application "{app_name}" to pause')
-        return f"Paused {app_name}."
+        _applescript('tell application "Music" to pause')
+        return "Paused Apple Music."
 
     elif action == "next":
-        _applescript(f'tell application "{app_name}" to next track')
-        return f"Skipped to next track on {app_name}."
+        _applescript('tell application "Music" to next track')
+        return "Skipped to next track on Apple Music."
 
     elif action == "previous":
-        _applescript(f'tell application "{app_name}" to previous track')
-        return f"Went to previous track on {app_name}."
+        _applescript('tell application "Music" to previous track')
+        return "Went to previous track on Apple Music."
 
     elif action == "current_track":
         info = _applescript(
-            f'tell application "{app_name}" to get '
-            f'{{name of current track, artist of current track, album of current track}}'
+            'tell application "Music" to get '
+            '{name of current track, artist of current track, album of current track}'
         )
         if info.startswith("Error"):
             return "No track is currently playing."
-        return f"Now playing on {app_name}: {info}"
+        return f"Now playing on Apple Music: {info}"
 
     elif action == "play_song" and safe_query:
-        if app == "spotify":
-            _applescript(f'tell application "Spotify" to play')
-            return f"Spotify doesn't support search via AppleScript. Resumed playback. Try searching in the Spotify app for '{query}'."
-        else:
-            if safe_artist:
-                result = _applescript(
-                    f'tell application "Music"\n'
-                    f'  set results to (search playlist "Library" for "{safe_query}" only songs)\n'
-                    f'  if (count of results) = 0 then return "NOT_FOUND"\n'
-                    f'  repeat with t in results\n'
-                    f'    if artist of t contains "{safe_artist}" then\n'
-                    f'      play t\n'
-                    f'      return name of current track & " by " & artist of current track\n'
-                    f'    end if\n'
-                    f'  end repeat\n'
-                    f'  play item 1 of results\n'
-                    f'  return name of current track & " by " & artist of current track\n'
-                    f'end tell'
-                )
-            else:
-                result = _applescript(
-                    f'tell application "Music"\n'
-                    f'  set results to (search playlist "Library" for "{safe_query}" only songs)\n'
-                    f'  if (count of results) > 0 then\n'
-                    f'    play item 1 of results\n'
-                    f'    return name of current track & " by " & artist of current track\n'
-                    f'  else\n'
-                    f'    return "NOT_FOUND"\n'
-                    f'  end if\n'
-                    f'end tell'
-                )
-            if "NOT_FOUND" in result or result.startswith("Error"):
-                msg = f"Could not find '{query}'"
-                if artist:
-                    msg += f" by {artist}"
-                return msg + " in your Apple Music library."
-            return f"Now playing: {result}"
-
-    elif action == "play_artist" and safe_query:
-        if app == "spotify":
-            _applescript(f'tell application "Spotify" to play')
-            return f"Spotify doesn't support search via AppleScript. Resumed playback."
-        else:
+        if safe_artist:
             result = _applescript(
                 f'tell application "Music"\n'
-                f'  set results to (every track of playlist "Library" whose artist contains "{safe_query}")\n'
+                f'  set results to (search playlist "Library" for "{safe_query}" only songs)\n'
                 f'  if (count of results) = 0 then return "NOT_FOUND"\n'
-                f'  set shuffle enabled to true\n'
+                f'  repeat with t in results\n'
+                f'    if artist of t contains "{safe_artist}" then\n'
+                f'      play t\n'
+                f'      return name of current track & " by " & artist of current track\n'
+                f'    end if\n'
+                f'  end repeat\n'
                 f'  play item 1 of results\n'
-                f'  return "Playing " & artist of current track & " — " & name of current track & " (" & (count of results) & " tracks, shuffled)"\n'
+                f'  return name of current track & " by " & artist of current track\n'
                 f'end tell'
             )
-            if "NOT_FOUND" in result or result.startswith("Error"):
-                return f"Could not find artist '{query}' in your Apple Music library."
-            return result
-
-    elif action == "play_album" and safe_query:
-        if app == "spotify":
-            _applescript(f'tell application "Spotify" to play')
-            return f"Spotify doesn't support search via AppleScript. Resumed playback."
         else:
             result = _applescript(
                 f'tell application "Music"\n'
-                f'  set results to (search playlist "Library" for "{safe_query}" only albums)\n'
+                f'  set results to (search playlist "Library" for "{safe_query}" only songs)\n'
                 f'  if (count of results) > 0 then\n'
                 f'    play item 1 of results\n'
-                f'    return "Playing album: " & album of current track\n'
+                f'    return name of current track & " by " & artist of current track\n'
                 f'  else\n'
                 f'    return "NOT_FOUND"\n'
                 f'  end if\n'
                 f'end tell'
             )
-            if "NOT_FOUND" in result or result.startswith("Error"):
-                return f"Could not find album '{query}' in your Apple Music library."
-            return result
+        if "NOT_FOUND" in result or result.startswith("Error"):
+            msg = f"Could not find '{query}'"
+            if artist:
+                msg += f" by {artist}"
+            return msg + " in your Apple Music library."
+        return f"Now playing: {result}"
+
+    elif action == "play_artist" and safe_query:
+        result = _applescript(
+            f'tell application "Music"\n'
+            f'  set results to (every track of playlist "Library" whose artist contains "{safe_query}")\n'
+            f'  if (count of results) = 0 then return "NOT_FOUND"\n'
+            f'  set shuffle enabled to true\n'
+            f'  play item 1 of results\n'
+            f'  return "Playing " & artist of current track & " — " & name of current track & " (" & (count of results) & " tracks, shuffled)"\n'
+            f'end tell'
+        )
+        if "NOT_FOUND" in result or result.startswith("Error"):
+            return f"Could not find artist '{query}' in your Apple Music library."
+        return result
+
+    elif action == "play_album" and safe_query:
+        result = _applescript(
+            f'tell application "Music"\n'
+            f'  set results to (search playlist "Library" for "{safe_query}" only albums)\n'
+            f'  if (count of results) > 0 then\n'
+            f'    play item 1 of results\n'
+            f'    return "Playing album: " & album of current track\n'
+            f'  else\n'
+            f'    return "NOT_FOUND"\n'
+            f'  end if\n'
+            f'end tell'
+        )
+        if "NOT_FOUND" in result or result.startswith("Error"):
+            return f"Could not find album '{query}' in your Apple Music library."
+        return result
 
     elif action == "artist_info" and safe_query:
-        if app == "spotify":
-            return "Spotify library browsing is not supported via AppleScript."
         result = _applescript(
             f'tell application "Music"\n'
             f'  set results to (every track of playlist "Library" whose artist contains "{safe_query}")\n'
@@ -225,8 +365,6 @@ def execute(args: dict) -> str:
         return result
 
     elif action == "album_info" and safe_query:
-        if app == "spotify":
-            return "Spotify library browsing is not supported via AppleScript."
         result = _applescript(
             f'tell application "Music"\n'
             f'  set results to (every track of playlist "Library" whose album contains "{safe_query}")\n'
@@ -243,8 +381,6 @@ def execute(args: dict) -> str:
         return result
 
     elif action == "search" and safe_query:
-        if app == "spotify":
-            return "Spotify library search is not supported via AppleScript."
         result = _applescript(
             f'tell application "Music"\n'
             f'  set results to (search playlist "Library" for "{safe_query}")\n'
@@ -265,8 +401,6 @@ def execute(args: dict) -> str:
         return result
 
     elif action == "list_artists":
-        if app == "spotify":
-            return "Spotify library browsing is not supported via AppleScript."
         result = _applescript(
             'tell application "Music"\n'
             '  set allTracks to every track of playlist "Library"\n'
@@ -292,8 +426,6 @@ def execute(args: dict) -> str:
         return result
 
     elif action == "list_albums":
-        if app == "spotify":
-            return "Spotify library browsing is not supported via AppleScript."
         result = _applescript(
             'tell application "Music"\n'
             '  set allTracks to every track of playlist "Library"\n'
@@ -323,3 +455,18 @@ def execute(args: dict) -> str:
         return result
 
     return f"Unknown action: {action}"
+
+
+# ---------------------------------------------------------------------------
+# Main dispatch
+# ---------------------------------------------------------------------------
+def execute(args: dict) -> str:
+    """Route to the correct backend based on the app parameter."""
+    action = args.get("action", "")
+    app = args.get("app", "apple_music")
+    query = args.get("query", "")
+    artist = args.get("artist", "")
+
+    if app == "spotify":
+        return _spotify_execute(action, query, artist)
+    return _apple_music_execute(action, query, artist)
