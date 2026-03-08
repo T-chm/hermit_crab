@@ -49,8 +49,12 @@ pip install -r requirements.txt
 
 ```
 hermit_crab/
-  app.py              # FastAPI backend — WebSocket server, Whisper STT, Ollama streaming, tool execution
+  app.py              # FastAPI backend — WebSocket server, Whisper STT, Ollama streaming
   static/index.html   # Web UI — chat interface, audio capture, VAD
+  tools/              # Plugin directory — drop a .py file here to add a tool
+    __init__.py       # Auto-discovery loader
+    music_control.py  # Apple Music / Spotify control
+    _template.py      # Template for creating new tools
   whisper_ollama.py   # CLI version (standalone, no web UI)
   requirements.txt    # Python dependencies
   setup.sh            # One-step install script (creates .venv automatically)
@@ -114,11 +118,14 @@ Ask the assistant to control your music with natural language:
 | Play/resume | "Play music" |
 | Pause | "Pause the music" |
 | Skip | "Next song" / "Previous track" |
-| Play a song | "Play Bohemian Rhapsody on Apple Music" |
-| Play an artist | "Play some U2" |
+| Play a song | "Play Bohemian Rhapsody" |
+| Song by artist | "Play Volcano from U2" |
+| Play an artist | "Play some Coldplay" (shuffles all their songs) |
 | Play an album | "Play Abbey Road" |
 | Now playing | "What song is playing?" |
 | Search library | "Search my library for Beatles" |
+| Browse artists | "Which artists do I have in my music library?" |
+| Browse albums | "What albums do I have?" |
 | Artist info | "What albums do I have by Radiohead?" |
 | Album info | "What tracks are on OK Computer?" |
 
@@ -133,6 +140,48 @@ Ask the assistant to control your music with natural language:
 - **Speak replies**: Enable browser text-to-speech for responses
 - **Sensitivity slider**: Adjust VAD microphone threshold
 - **Clear chat**: Reset conversation history
+
+## Creating Tools
+
+Tools are Python files in the `tools/` directory. Each file exports two things:
+
+- `DEFINITION` — an Ollama tool calling schema (tells the LLM what the tool does)
+- `execute(args)` — a function that runs the tool and returns a string
+
+To create a new tool:
+
+1. Copy `tools/_template.py` to `tools/your_tool.py`
+2. Fill in the schema and implement `execute()`
+3. Restart the server — it auto-discovers new tools
+
+Example tool (`tools/weather.py`):
+
+```python
+import subprocess
+
+DEFINITION = {
+    "type": "function",
+    "function": {
+        "name": "get_weather",
+        "description": "Get current weather for a city. Only use when the user asks about weather.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "city": {
+                    "type": "string",
+                    "description": "City name",
+                },
+            },
+            "required": ["city"],
+        },
+    },
+}
+
+def execute(args: dict) -> str:
+    city = args.get("city", "")
+    result = subprocess.run(["curl", "-s", f"wttr.in/{city}?format=3"], capture_output=True, text=True)
+    return result.stdout.strip() or "Could not fetch weather."
+```
 
 ## Switching Models
 

@@ -7,7 +7,6 @@ Whisper STT + Ollama LLM + Web UI
 import asyncio
 import json
 import os
-import subprocess
 import tempfile
 import warnings
 from pathlib import Path
@@ -18,6 +17,8 @@ import whisper
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from pydub import AudioSegment
+
+from tools import TOOLS, execute_tool
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
@@ -32,7 +33,11 @@ SYSTEM_PROMPT = (
     "Keep responses brief and conversational unless the user asks for detail. "
     "IMPORTANT: Only use tools when the user EXPLICITLY asks you to perform an action "
     "(e.g. 'play music', 'pause', 'skip song'). Never call tools for greetings, "
-    "questions, or general conversation."
+    "questions, or general conversation. "
+    "For music requests: use play_artist when the user wants to hear an artist "
+    "(e.g. 'play some Coldplay'). Use play_song with both query and artist when "
+    "they want a specific song (e.g. 'play Volcano from U2' → query='Volcano', artist='U2'). "
+    "Use list_artists or list_albums when they ask what's in their library."
 )
 MAX_HISTORY = 50  # trim oldest messages beyond this
 
@@ -49,239 +54,6 @@ async def load_whisper():
     print(f"Loading Whisper '{DEFAULT_WHISPER}' model...")
     whisper_model = whisper.load_model(DEFAULT_WHISPER)
     print("Whisper model loaded. Ready.")
-
-
-# ---------------------------------------------------------------------------
-# Tools
-# ---------------------------------------------------------------------------
-TOOLS = [
-    {
-        "type": "function",
-        "function": {
-            "name": "music_control",
-            "description": "Control music playback on Apple Music or Spotify. ONLY use when the user explicitly asks to play, pause, skip, or get info about music. Do NOT call this for greetings or general conversation.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "action": {
-                        "type": "string",
-                        "enum": [
-                            "play", "pause", "next", "previous",
-                            "current_track", "play_song", "play_artist", "play_album",
-                            "artist_info", "album_info", "search",
-                        ],
-                        "description": (
-                            "The music action to perform. "
-                            "artist_info: list albums and songs by an artist in the library. "
-                            "album_info: list tracks on an album. "
-                            "search: search the library for a query and return matching tracks."
-                        ),
-                    },
-                    "app": {
-                        "type": "string",
-                        "enum": ["spotify", "apple_music"],
-                        "description": "Which music app to use. Default: apple_music",
-                    },
-                    "query": {
-                        "type": "string",
-                        "description": "Song name, artist name, or album name",
-                    },
-                },
-                "required": ["action"],
-            },
-        },
-    },
-]
-
-
-def _applescript(script: str) -> str:
-    """Run an AppleScript via osascript and return output."""
-    r = subprocess.run(
-        ["osascript", "-e", script],
-        capture_output=True, text=True, timeout=10,
-    )
-    if r.returncode != 0:
-        return f"Error: {r.stderr.strip()}"
-    return r.stdout.strip()
-
-
-def _music_app_name(app: str) -> str:
-    return "Spotify" if app == "spotify" else "Music"
-
-
-def execute_tool(name: str, args: dict) -> str:
-    """Execute a tool call and return the result as a string."""
-    if name != "music_control":
-        return f"Unknown tool: {name}"
-
-    action = args.get("action", "")
-    app = args.get("app", "apple_music")
-    query = args.get("query", "")
-    app_name = _music_app_name(app)
-
-    # Escape single quotes in query
-    safe_query = query.replace("'", "'\\''") if query else ""
-
-    if action == "play":
-        _applescript(f'tell application "{app_name}" to play')
-        return f"Resumed playback on {app_name}."
-
-    elif action == "pause":
-        _applescript(f'tell application "{app_name}" to pause')
-        return f"Paused {app_name}."
-
-    elif action == "next":
-        _applescript(f'tell application "{app_name}" to next track')
-        return f"Skipped to next track on {app_name}."
-
-    elif action == "previous":
-        _applescript(f'tell application "{app_name}" to previous track')
-        return f"Went to previous track on {app_name}."
-
-    elif action == "current_track":
-        info = _applescript(
-            f'tell application "{app_name}" to get '
-            f'{{name of current track, artist of current track, album of current track}}'
-        )
-        if info.startswith("Error"):
-            return "No track is currently playing."
-        return f"Now playing on {app_name}: {info}"
-
-    elif action == "play_song" and safe_query:
-        if app == "spotify":
-            # Spotify can't search via AppleScript — just play and let it resume
-            _applescript(f'tell application "Spotify" to play')
-            return f"Spotify doesn't support search via AppleScript. Resumed playback. Try searching in the Spotify app for '{query}'."
-        else:
-            result = _applescript(
-                f'tell application "Music"\n'
-                f'  set results to (search playlist "Library" for "{safe_query}" only songs)\n'
-                f'  if (count of results) > 0 then\n'
-                f'    play item 1 of results\n'
-                f'    return name of current track & " by " & artist of current track\n'
-                f'  else\n'
-                f'    return "NOT_FOUND"\n'
-                f'  end if\n'
-                f'end tell'
-            )
-            if "NOT_FOUND" in result or result.startswith("Error"):
-                return f"Could not find '{query}' in your Apple Music library."
-            return f"Now playing: {result}"
-
-    elif action == "play_artist" and safe_query:
-        if app == "spotify":
-            _applescript(f'tell application "Spotify" to play')
-            return f"Spotify doesn't support search via AppleScript. Resumed playback."
-        else:
-            result = _applescript(
-                f'tell application "Music"\n'
-                f'  set results to (search playlist "Library" for "{safe_query}" only artists)\n'
-                f'  if (count of results) > 0 then\n'
-                f'    play item 1 of results\n'
-                f'    return "Playing " & artist of current track\n'
-                f'  else\n'
-                f'    return "NOT_FOUND"\n'
-                f'  end if\n'
-                f'end tell'
-            )
-            if "NOT_FOUND" in result or result.startswith("Error"):
-                return f"Could not find artist '{query}' in your Apple Music library."
-            return result
-
-    elif action == "play_album" and safe_query:
-        if app == "spotify":
-            _applescript(f'tell application "Spotify" to play')
-            return f"Spotify doesn't support search via AppleScript. Resumed playback."
-        else:
-            result = _applescript(
-                f'tell application "Music"\n'
-                f'  set results to (search playlist "Library" for "{safe_query}" only albums)\n'
-                f'  if (count of results) > 0 then\n'
-                f'    play item 1 of results\n'
-                f'    return "Playing album: " & album of current track\n'
-                f'  else\n'
-                f'    return "NOT_FOUND"\n'
-                f'  end if\n'
-                f'end tell'
-            )
-            if "NOT_FOUND" in result or result.startswith("Error"):
-                return f"Could not find album '{query}' in your Apple Music library."
-            return result
-
-    elif action == "artist_info" and safe_query:
-        if app == "spotify":
-            return "Spotify library browsing is not supported via AppleScript."
-        result = _applescript(
-            f'tell application "Music"\n'
-            f'  set results to (every track of playlist "Library" whose artist contains "{safe_query}")\n'
-            f'  if (count of results) = 0 then return "NOT_FOUND"\n'
-            f'  set albumList to {{}}\n'
-            f'  set songList to {{}}\n'
-            f'  repeat with t in results\n'
-            f'    set aName to album of t\n'
-            f'    if aName is not in albumList then set end of albumList to aName\n'
-            f'    if (count of songList) < 20 then\n'
-            f'      set end of songList to (name of t & " (" & album of t & ")")\n'
-            f'    end if\n'
-            f'  end repeat\n'
-            f'  set albumCount to count of albumList\n'
-            f'  set songCount to count of results\n'
-            f'  set output to "Artist: {safe_query}" & return & "Songs: " & songCount & ", Albums: " & albumCount & return & return & "Albums:" & return\n'
-            f'  repeat with a in albumList\n'
-            f'    set output to output & "- " & a & return\n'
-            f'  end repeat\n'
-            f'  set output to output & return & "Songs (first 20):" & return\n'
-            f'  repeat with s in songList\n'
-            f'    set output to output & "- " & s & return\n'
-            f'  end repeat\n'
-            f'  return output\n'
-            f'end tell'
-        )
-        if "NOT_FOUND" in result or result.startswith("Error"):
-            return f"Could not find artist '{query}' in your Apple Music library."
-        return result
-
-    elif action == "album_info" and safe_query:
-        if app == "spotify":
-            return "Spotify library browsing is not supported via AppleScript."
-        result = _applescript(
-            f'tell application "Music"\n'
-            f'  set results to (every track of playlist "Library" whose album contains "{safe_query}")\n'
-            f'  if (count of results) = 0 then return "NOT_FOUND"\n'
-            f'  set output to "Album: " & album of (item 1 of results) & return & "Artist: " & artist of (item 1 of results) & return & "Tracks:" & return\n'
-            f'  repeat with t in results\n'
-            f'    set output to output & (track number of t) & ". " & (name of t) & " (" & (round ((duration of t) / 60) rounding down) & ":" & text -2 thru -1 of ("0" & (round ((duration of t) mod 60))) & ")" & return\n'
-            f'  end repeat\n'
-            f'  return output\n'
-            f'end tell'
-        )
-        if "NOT_FOUND" in result or result.startswith("Error"):
-            return f"Could not find album '{query}' in your Apple Music library."
-        return result
-
-    elif action == "search" and safe_query:
-        if app == "spotify":
-            return "Spotify library search is not supported via AppleScript."
-        result = _applescript(
-            f'tell application "Music"\n'
-            f'  set results to (search playlist "Library" for "{safe_query}")\n'
-            f'  if (count of results) = 0 then return "NOT_FOUND"\n'
-            f'  set output to "Search results for \\"{safe_query}\\":" & return\n'
-            f'  set maxItems to 15\n'
-            f'  if (count of results) < maxItems then set maxItems to (count of results)\n'
-            f'  repeat with i from 1 to maxItems\n'
-            f'    set t to item i of results\n'
-            f'    set output to output & "- " & (name of t) & " by " & (artist of t) & " (" & (album of t) & ")" & return\n'
-            f'  end repeat\n'
-            f'  if (count of results) > 15 then set output to output & "... and " & ((count of results) - 15) & " more results"\n'
-            f'  return output\n'
-            f'end tell'
-        )
-        if "NOT_FOUND" in result or result.startswith("Error"):
-            return f"No results found for '{query}' in your Apple Music library."
-        return result
-
-    return f"Unknown action: {action}"
 
 
 # ---------------------------------------------------------------------------
