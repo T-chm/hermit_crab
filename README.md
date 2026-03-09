@@ -5,7 +5,7 @@ A locally running, always-on voice assistant with a web interface. All processin
 - **Speech-to-text**: OpenAI Whisper
 - **LLM**: Qwen 3.5 (4B) via Ollama
 - **Interface**: Web UI served by FastAPI
-- **Tools**: Apple Music and Spotify control via AppleScript
+- **Tools**: Music, weather, smart home, reminders, notes, summarize, messaging
 
 ## Requirements
 
@@ -50,11 +50,17 @@ pip install -r requirements.txt
 ```
 hermit_crab/
   app.py              # FastAPI backend — WebSocket server, Whisper STT, Ollama streaming
-  static/index.html   # Web UI — chat interface, audio capture, VAD
+  static/index.html   # Web UI — chat, audio capture, VAD, tool cards, quick actions
   tools/              # Plugin directory — drop a .py file here to add a tool
     __init__.py       # Auto-discovery loader
-    music_control.py  # Apple Music / Spotify control
     _template.py      # Template for creating new tools
+    music_control.py  # Apple Music / Spotify control
+    weather.py        # Weather via wttr.in
+    smart_home.py     # Philips Hue lights via openhue CLI
+    reminders.py      # Apple Reminders via remindctl CLI
+    notes.py          # Apple Notes via AppleScript
+    summarize.py      # URL/PDF/YouTube summarization via summarize CLI
+    messaging.py      # iMessage/SMS via imsg CLI
   whisper_ollama.py   # CLI version (standalone, no web UI)
   requirements.txt    # Python dependencies
   setup.sh            # One-step install script (creates .venv automatically)
@@ -82,13 +88,34 @@ Toggle "Auto think" on in the UI to enable this. It is off by default for maximu
 
 ### Tool Calling
 
-The LLM can call tools during a conversation. Tools are defined in the Ollama API request and the model decides when to use them based on the user's message.
+The LLM can call tools during a conversation. Tools are defined in the Ollama API request and the model decides when to use them based on the user's message. Tools are only invoked when the user explicitly asks for an action — the model will not call tools for greetings or general questions.
+
+Each tool call produces a **rich UI card** in the chat with tool-specific styling, parsed results, and contextual action buttons.
 
 Currently supported tools:
 
-- **Music control** — play, pause, skip, search, and browse your Apple Music or Spotify library
+| Tool | What it does | Dependency |
+|---|---|---|
+| **Music** | Play, pause, skip, search, browse Apple Music / Spotify | None (Spotify needs [spogo](https://github.com/steipete/spogo)) |
+| **Weather** | Current conditions and forecasts for any location | None (uses wttr.in) |
+| **Smart Home** | Control Philips Hue lights, rooms, and scenes | [openhue CLI](https://github.com/openhue/openhue-cli) |
+| **Reminders** | Create, view, and complete Apple Reminders | [remindctl](https://github.com/steipete/remindctl) |
+| **Notes** | Create, search, and list Apple Notes | None (native AppleScript) |
+| **Summarize** | Summarize web pages, PDFs, and YouTube videos | [summarize CLI](https://github.com/steipete/summarize) |
+| **Messaging** | Send and read iMessages/SMS | [imsg CLI](https://github.com/steipete/imsg) |
 
-Tools are only invoked when the user explicitly asks for an action (e.g. "play some jazz", "skip this song"). The model will not call tools for greetings or general questions.
+### Quick Actions Bar
+
+The UI includes a row of shortcut buttons above the text input for common operations:
+
+- **Weather** — check local weather
+- **Music controls** — previous, play/pause, next, now playing
+- **Lights** — list smart home lights
+- **Tasks** — show today's reminders
+- **Notes** — list notes
+- **Msgs** — show recent messages
+
+These send pre-defined voice commands to the assistant, identical to typing them.
 
 ## Usage
 
@@ -111,8 +138,6 @@ Type in the text box and press Enter or click Send. Works alongside voice input.
 
 ### Music Control
 
-Ask the assistant to control your music with natural language:
-
 | Command | Example |
 |---|---|
 | Play/resume | "Play music" |
@@ -124,22 +149,74 @@ Ask the assistant to control your music with natural language:
 | Play an album | "Play Abbey Road" |
 | Now playing | "What song is playing?" |
 | Search library | "Search my library for Beatles" |
-| Browse artists | "Which artists do I have in my music library?" |
-| Browse albums | "What albums do I have?" |
-| Artist info | "What albums do I have by Radiohead?" |
-| Album info | "What tracks are on OK Computer?" |
+| Browse | "Which artists do I have?" / "What albums do I have?" |
 
-**Apple Music**: Full support via AppleScript — play, pause, skip, search library, browse artists/albums.
+**Apple Music** works out of the box via AppleScript. **Spotify** requires [spogo](https://github.com/steipete/spogo) (`brew install steipete/tap/spogo && spogo auth import --browser chrome`). Without spogo, Spotify commands will prompt you to install it.
 
-**Spotify**: Full support via [spogo](https://github.com/steipete/spogo) CLI — play, pause, skip, search, browse library, play by artist/album/song. Requires Spotify Premium.
+### Weather
 
-```bash
-# Install spogo for Spotify support
-brew install steipete/tap/spogo
-spogo auth import --browser chrome
-```
+No setup required. Uses [wttr.in](https://wttr.in) — no API key needed.
 
-Without spogo installed, Spotify commands will prompt you to install it.
+| Command | Example |
+|---|---|
+| Quick check | "What's the weather?" / "Weather in Tokyo" |
+| Current detail | "Give me detailed weather for London" |
+| Forecast | "What's the forecast for this week in Paris?" |
+
+### Smart Home (Philips Hue)
+
+Requires [openhue CLI](https://github.com/openhue/openhue-cli): `brew install openhue/cli/openhue-cli`. Press the button on your Hue Bridge on first run to pair.
+
+| Command | Example |
+|---|---|
+| List lights | "Show me all the lights" |
+| Turn on/off | "Turn off the bedroom light" / "Turn on the living room" |
+| Brightness | "Set the desk lamp to 50%" |
+| Color | "Make the bedroom light red" |
+| Scenes | "Activate the relax scene in the bedroom" |
+
+### Reminders
+
+Requires [remindctl](https://github.com/steipete/remindctl): `brew install steipete/tap/remindctl`. Grant Reminders permission when prompted.
+
+| Command | Example |
+|---|---|
+| View | "What are my reminders?" / "Show today's tasks" |
+| Create | "Remind me to call mom tomorrow" |
+| With due date | "Remind me to submit the report by Friday at 9am" |
+| Complete | "Mark reminder 3 as done" |
+| Lists | "Show my reminder lists" |
+
+### Notes
+
+No setup required — uses native macOS AppleScript.
+
+| Command | Example |
+|---|---|
+| Create | "Take a note called Meeting Notes" |
+| With body | "Make a note titled Groceries with milk, eggs, bread" |
+| Search | "Find my note about recipes" |
+| List | "List all my notes" / "Show notes in the Work folder" |
+
+### Summarize
+
+Requires [summarize CLI](https://github.com/steipete/summarize): `brew install steipete/tap/summarize`. Needs at least one API key (e.g. `GEMINI_API_KEY`).
+
+| Command | Example |
+|---|---|
+| Web page | "Summarize https://example.com/article" |
+| YouTube | "Summarize this video: https://youtu.be/..." |
+| Short/long | "Give me a short summary of https://..." |
+
+### Messaging (iMessage/SMS)
+
+Requires [imsg CLI](https://github.com/steipete/imsg): `brew install steipete/tap/imsg`. Your terminal needs Full Disk Access (System Settings > Privacy > Full Disk Access).
+
+| Command | Example |
+|---|---|
+| Send | "Text John I'm running late" |
+| Read | "Show my recent messages" |
+| Chat history | "Read my conversation with Mom" |
 
 ### Other Controls
 
@@ -162,7 +239,7 @@ To create a new tool:
 2. Fill in the schema and implement `execute()`
 3. Restart the server — it auto-discovers new tools
 
-Example tool (`tools/weather.py`):
+See `tools/weather.py` or `tools/notes.py` for real examples. A minimal tool looks like:
 
 ```python
 import subprocess
@@ -170,25 +247,22 @@ import subprocess
 DEFINITION = {
     "type": "function",
     "function": {
-        "name": "get_weather",
-        "description": "Get current weather for a city. Only use when the user asks about weather.",
+        "name": "my_tool",
+        "description": "Does X. Only use when the user asks for X.",
         "parameters": {
             "type": "object",
             "properties": {
-                "city": {
-                    "type": "string",
-                    "description": "City name",
-                },
+                "query": {"type": "string", "description": "The input"},
             },
-            "required": ["city"],
+            "required": ["query"],
         },
     },
 }
 
 def execute(args: dict) -> str:
-    city = args.get("city", "")
-    result = subprocess.run(["curl", "-s", f"wttr.in/{city}?format=3"], capture_output=True, text=True)
-    return result.stdout.strip() or "Could not fetch weather."
+    query = args.get("query", "")
+    r = subprocess.run(["some-cli", query], capture_output=True, text=True, timeout=10)
+    return r.stdout.strip() or "No result."
 ```
 
 ## Switching Models
@@ -271,3 +345,14 @@ Make sure Apple Music or Spotify is open. On first use, macOS may prompt you to 
 
 **Spotify says "spogo required"**
 Install spogo: `brew install steipete/tap/spogo && spogo auth import --browser chrome`. Requires Spotify Premium.
+
+**Tool says "CLI not installed"**
+Each tool will tell you the exact install command if its CLI dependency is missing. All optional dependencies can be installed via Homebrew:
+
+```bash
+brew install steipete/tap/spogo        # Spotify
+brew install openhue/cli/openhue-cli   # Philips Hue
+brew install steipete/tap/remindctl    # Apple Reminders
+brew install steipete/tap/summarize    # Summarize
+brew install steipete/tap/imsg         # iMessage
+```

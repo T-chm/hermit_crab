@@ -31,13 +31,24 @@ DEFAULT_WHISPER = "base"
 SYSTEM_PROMPT = (
     "You are Hermit Crab, a helpful and concise voice assistant running locally. "
     "Keep responses brief and conversational unless the user asks for detail. "
-    "IMPORTANT: Only use tools when the user EXPLICITLY asks you to perform an action "
-    "(e.g. 'play music', 'pause', 'skip song'). Never call tools for greetings, "
-    "questions, or general conversation. "
-    "For music requests: use play_artist when the user wants to hear an artist "
-    "(e.g. 'play some Coldplay'). Use play_song with both query and artist when "
-    "they want a specific song (e.g. 'play Volcano from U2' → query='Volcano', artist='U2'). "
-    "Use list_artists or list_albums when they ask what's in their library."
+    "IMPORTANT: Only use tools when the user EXPLICITLY asks you to perform an action. "
+    "Never call tools for greetings, questions, or general conversation.\n"
+    "TOOL GUIDANCE:\n"
+    "- music_control: 'play music', 'pause', 'skip'. Use play_artist for artists "
+    "(e.g. 'play some Coldplay'), play_song with query+artist for specific songs "
+    "(e.g. 'play Volcano from U2' → query='Volcano', artist='U2').\n"
+    "- weather: 'what's the weather in London', 'forecast for Tokyo'. Use brief "
+    "for quick checks, current for detail, forecast for multi-day.\n"
+    "- smart_home: 'turn off the bedroom light', 'set living room to 50%', "
+    "'make it red', 'activate the relax scene'.\n"
+    "- reminders: 'remind me to call mom tomorrow', 'what are my reminders', "
+    "'show today's tasks'. Use add with title and due date.\n"
+    "- notes: 'take a note', 'find my note about recipes', 'list my notes'. "
+    "Use create with title and body.\n"
+    "- summarize: 'summarize this article/video' + URL. Handles web pages, "
+    "PDFs, and YouTube videos.\n"
+    "- messaging: 'text John I'm running late', 'read my messages', "
+    "'show recent conversations'. Always confirm before sending."
 )
 MAX_HISTORY = 50  # trim oldest messages beyond this
 
@@ -265,6 +276,13 @@ async def stream_ollama(ws: WebSocket, history: list, model: str, think: bool = 
 
                     tool_result = await asyncio.to_thread(execute_tool, tool_name, tool_args)
                     history.append({"role": "tool", "content": tool_result})
+
+                    await ws.send_json({
+                        "type": "tool_result",
+                        "name": tool_name,
+                        "args": tool_args,
+                        "result": tool_result,
+                    })
 
                 # Stream the follow-up response (no tools this time)
                 messages = [{"role": "system", "content": SYSTEM_PROMPT}] + history

@@ -6,6 +6,33 @@ import subprocess
 
 HAS_SPOGO = shutil.which("spogo") is not None
 
+_INSTALL_SPOGO_MSG = (
+    "For full Spotify search & play-by-name support, install the spogo CLI: "
+    "brew install steipete/tap/spogo && spogo auth import --browser chrome"
+)
+_AUTH_SPOGO_MSG = (
+    "Spotify search requires spogo authentication. "
+    "Run: spogo auth import --browser chrome  (Requires Spotify Premium "
+    "and being logged in at open.spotify.com in Chrome.)"
+)
+
+
+def _spogo_auth_ok() -> bool:
+    """Check if spogo has a valid sp_dc session cookie."""
+    if not HAS_SPOGO:
+        return False
+    try:
+        r = subprocess.run(
+            ["spogo", "auth", "status"],
+            capture_output=True, text=True, timeout=5,
+        )
+        return "missing sp_dc" not in r.stdout
+    except Exception:
+        return False
+
+
+SPOGO_AUTHED = HAS_SPOGO and _spogo_auth_ok()
+
 DEFINITION = {
     "type": "function",
     "function": {
@@ -60,7 +87,7 @@ DEFINITION = {
 
 
 # ---------------------------------------------------------------------------
-# AppleScript helpers (Apple Music)
+# AppleScript helpers
 # ---------------------------------------------------------------------------
 def _applescript(script: str, timeout: int = 15) -> str:
     """Run an AppleScript via osascript and return output."""
@@ -74,131 +101,190 @@ def _applescript(script: str, timeout: int = 15) -> str:
 
 
 # ---------------------------------------------------------------------------
-# spogo helpers (Spotify)
+# spogo helpers (Spotify — requires authenticated sp_dc cookie)
 # ---------------------------------------------------------------------------
 def _spogo(args: list, timeout: int = 15) -> str:
     """Run a spogo CLI command and return output."""
-    r = subprocess.run(
-        ["spogo"] + args,
-        capture_output=True, text=True, timeout=timeout,
-    )
-    if r.returncode != 0:
-        return f"Error: {r.stderr.strip()}"
-    return r.stdout.strip()
+    try:
+        r = subprocess.run(
+            ["spogo"] + args,
+            capture_output=True, text=True, timeout=timeout,
+        )
+        if r.returncode != 0:
+            return f"Error: {r.stderr.strip()}"
+        return r.stdout.strip()
+    except subprocess.TimeoutExpired:
+        return "Error: spogo command timed out"
+    except Exception as e:
+        return f"Error: spogo failed — {e}"
 
 
 def _spogo_json(args: list, timeout: int = 15):
-    """Run a spogo command with --json and parse the output."""
+    """Run a spogo command with --json and parse the output.
+    Returns (parsed_data, None) on success, or (None, error_string) on failure."""
     out = _spogo(args + ["--json"], timeout=timeout)
     if out.startswith("Error"):
-        return None
+        return None, out
     try:
-        return _json.loads(out)
+        return _json.loads(out), None
     except (_json.JSONDecodeError, ValueError):
-        return None
-
-
-def _spotify_no_spogo():
-    return (
-        "Spotify requires the spogo CLI for full control. "
-        "Install it with: brew install steipete/tap/spogo && spogo auth import --browser chrome"
-    )
+        return None, f"Error: unexpected output from spogo"
 
 
 # ---------------------------------------------------------------------------
-# Spotify actions via spogo
+# Spotify via AppleScript (no spogo needed — basic playback + URI scheme)
 # ---------------------------------------------------------------------------
+def _spotify_applescript(script: str, timeout: int = 15) -> str:
+    """Run an AppleScript targeting the Spotify app."""
+    return _applescript(script, timeout)
+
+
+def _spotify_open_uri(uri: str) -> str:
+    """Open a Spotify URI via the app (triggers playback)."""
+    return _applescript(f'tell application "Spotify" to open location "{uri}"')
+
+
 def _spotify_execute(action: str, query: str, artist: str) -> str:
-    """Handle all Spotify actions via spogo CLI."""
-    if not HAS_SPOGO:
-        return _spotify_no_spogo()
+    """Handle Spotify actions. Uses AppleScript for basic playback,
+    spogo (if authenticated) for search/play-by-name, and falls back
+    to Spotify URI scheme when spogo is unavailable."""
 
+    # --- Basic playback: always via AppleScript (no auth needed) ---
     if action == "play":
-        _spogo(["play"])
+        result = _spotify_applescript('tell application "Spotify" to play')
+        if result.startswith("Error"):
+            return f"Could not resume Spotify playback. Is Spotify open? ({result})"
         return "Resumed playback on Spotify."
 
     elif action == "pause":
-        _spogo(["pause"])
+        result = _spotify_applescript('tell application "Spotify" to pause')
+        if result.startswith("Error"):
+            return f"Could not pause Spotify. Is Spotify open? ({result})"
         return "Paused Spotify."
 
     elif action == "next":
-        _spogo(["next"])
+        result = _spotify_applescript('tell application "Spotify" to next track')
+        if result.startswith("Error"):
+            return f"Could not skip track. Is Spotify open? ({result})"
         return "Skipped to next track on Spotify."
 
     elif action == "previous":
-        _spogo(["prev"])
+        result = _spotify_applescript('tell application "Spotify" to previous track')
+        if result.startswith("Error"):
+            return f"Could not go to previous track. Is Spotify open? ({result})"
         return "Went to previous track on Spotify."
 
     elif action == "current_track":
-        result = _spogo(["status", "--plain"])
-        if result.startswith("Error"):
+        info = _spotify_applescript(
+            'tell application "Spotify"\n'
+            '  if player state is playing then\n'
+            '    return (name of current track) & " by " & (artist of current track) & " (" & (album of current track) & ")"\n'
+            '  else\n'
+            '    return "NOT_PLAYING"\n'
+            '  end if\n'
+            'end tell'
+        )
+        if info.startswith("Error"):
+            return "Could not check Spotify playback. Is Spotify open?"
+        if "NOT_PLAYING" in info:
             return "No track is currently playing on Spotify."
-        return f"Now playing on Spotify: {result}"
+        return f"Now playing on Spotify: {info}"
 
+    # --- Search / play-by-name: use spogo for search, AppleScript for playback ---
     elif action == "play_song" and query:
+        if SPOGO_AUTHED:
+            search_query = f"{query} {artist}".strip() if artist else query
+            data, err = _spogo_json(["search", "track", search_query, "--limit", "5"])
+            if data:
+                tracks = data.get("items", [])
+                if tracks:
+                    picked = tracks[0]
+                    uri = picked.get("uri", "")
+                    name = picked.get("name", query)
+                    result = _spotify_applescript(f'tell application "Spotify" to play track "{uri}"')
+                    if result.startswith("Error"):
+                        return f"Found '{name}' but could not start playback. Is Spotify open? ({result})"
+                    return f"Now playing on Spotify: {name}"
+            # spogo search failed, fall through to URI scheme
+        # Fallback: open Spotify search URI
+        import urllib.parse
         search_query = f"{query} {artist}".strip() if artist else query
-        data = _spogo_json(["search", "track", search_query, "--limit", "5"])
-        if not data:
-            return f"No results for '{search_query}' on Spotify."
-        # data is a list of track objects; find best match
-        tracks = data if isinstance(data, list) else data.get("tracks", data.get("items", []))
-        if not tracks:
-            return f"No results for '{search_query}' on Spotify."
-        # If artist specified, try to match
-        picked = tracks[0]
-        if artist:
-            for t in tracks:
-                t_artists = ""
-                if isinstance(t.get("artists"), list):
-                    t_artists = " ".join(a.get("name", "") for a in t["artists"])
-                elif isinstance(t.get("artist"), str):
-                    t_artists = t["artist"]
-                if artist.lower() in t_artists.lower():
-                    picked = t
-                    break
-        uri = picked.get("uri") or picked.get("id", "")
-        name = picked.get("name", query)
-        _spogo(["play", uri])
-        return f"Now playing on Spotify: {name}"
+        encoded = urllib.parse.quote(search_query)
+        _spotify_open_uri(f"spotify:search:{encoded}")
+        if not SPOGO_AUTHED:
+            hint = _INSTALL_SPOGO_MSG if not HAS_SPOGO else _AUTH_SPOGO_MSG
+            return f"Opened Spotify search for '{search_query}'. (Tip: {hint})"
+        return f"Opened Spotify search for '{search_query}'. Please select a track to play."
 
     elif action == "play_artist" and query:
-        data = _spogo_json(["search", "artist", query, "--limit", "1"])
-        if not data:
-            return f"Could not find artist '{query}' on Spotify."
-        artists = data if isinstance(data, list) else data.get("artists", data.get("items", []))
-        if not artists:
-            return f"Could not find artist '{query}' on Spotify."
-        uri = artists[0].get("uri") or artists[0].get("id", "")
-        name = artists[0].get("name", query)
-        _spogo(["play", uri, "--type", "artist", "--shuffle"])
-        return f"Playing {name} on Spotify (shuffled)."
+        if SPOGO_AUTHED:
+            data, err = _spogo_json(["search", "artist", query, "--limit", "1"])
+            if data:
+                artists = data.get("items", [])
+                if artists:
+                    uri = artists[0].get("uri", "")
+                    name = artists[0].get("name", query)
+                    result = _spotify_applescript(
+                        f'tell application "Spotify"\n'
+                        f'  set shuffling to true\n'
+                        f'  play track "{uri}"\n'
+                        f'end tell'
+                    )
+                    if result.startswith("Error"):
+                        return f"Found '{name}' but could not start playback. Is Spotify open? ({result})"
+                    return f"Playing {name} on Spotify (shuffled)."
+        # Fallback: open artist search URI
+        import urllib.parse
+        encoded = urllib.parse.quote(query)
+        _spotify_open_uri(f"spotify:search:{encoded}")
+        if not SPOGO_AUTHED:
+            hint = _INSTALL_SPOGO_MSG if not HAS_SPOGO else _AUTH_SPOGO_MSG
+            return f"Opened Spotify search for artist '{query}'. (Tip: {hint})"
+        return f"Opened Spotify search for artist '{query}'. Please select an artist to play."
 
     elif action == "play_album" and query:
-        data = _spogo_json(["search", "album", query, "--limit", "1"])
-        if not data:
-            return f"Could not find album '{query}' on Spotify."
-        albums = data if isinstance(data, list) else data.get("albums", data.get("items", []))
-        if not albums:
-            return f"Could not find album '{query}' on Spotify."
-        uri = albums[0].get("uri") or albums[0].get("id", "")
-        name = albums[0].get("name", query)
-        _spogo(["play", uri, "--type", "album"])
-        return f"Playing album '{name}' on Spotify."
+        if SPOGO_AUTHED:
+            data, err = _spogo_json(["search", "album", query, "--limit", "1"])
+            if data:
+                albums = data.get("items", [])
+                if albums:
+                    uri = albums[0].get("uri", "")
+                    name = albums[0].get("name", query)
+                    result = _spotify_applescript(f'tell application "Spotify" to play track "{uri}"')
+                    if result.startswith("Error"):
+                        return f"Found album '{name}' but could not start playback. Is Spotify open? ({result})"
+                    return f"Playing album '{name}' on Spotify."
+        # Fallback: open album search URI
+        import urllib.parse
+        encoded = urllib.parse.quote(query)
+        _spotify_open_uri(f"spotify:search:{encoded}")
+        if not SPOGO_AUTHED:
+            hint = _INSTALL_SPOGO_MSG if not HAS_SPOGO else _AUTH_SPOGO_MSG
+            return f"Opened Spotify search for album '{query}'. (Tip: {hint})"
+        return f"Opened Spotify search for album '{query}'. Please select an album to play."
 
     elif action == "search" and query:
-        result = _spogo(["search", "track", query, "--limit", "15", "--plain"])
-        if result.startswith("Error") or not result:
-            return f"No results for '{query}' on Spotify."
-        return f"Spotify search results for '{query}':\n{result}"
+        if SPOGO_AUTHED:
+            result = _spogo(["search", "track", query, "--limit", "15", "--plain"])
+            if not result.startswith("Error") and result:
+                return f"Spotify search results for '{query}':\n{result}"
+        # Fallback: open search in Spotify app
+        import urllib.parse
+        encoded = urllib.parse.quote(query)
+        _spotify_open_uri(f"spotify:search:{encoded}")
+        return f"Opened Spotify search for '{query}' in the app."
 
     elif action == "artist_info" and query:
-        data = _spogo_json(["search", "artist", query, "--limit", "1"])
+        if not SPOGO_AUTHED:
+            hint = _INSTALL_SPOGO_MSG if not HAS_SPOGO else _AUTH_SPOGO_MSG
+            return f"Artist info requires spogo. {hint}"
+        data, err = _spogo_json(["search", "artist", query, "--limit", "1"])
         if not data:
-            return f"Could not find artist '{query}' on Spotify."
-        artists = data if isinstance(data, list) else data.get("artists", data.get("items", []))
+            return err or f"Could not find artist '{query}' on Spotify."
+        artists = data.get("items", [])
         if not artists:
             return f"Could not find artist '{query}' on Spotify."
-        artist_id = artists[0].get("id") or artists[0].get("uri", "")
+        artist_id = artists[0].get("id", "")
         name = artists[0].get("name", query)
         info = _spogo(["artist", "info", artist_id, "--plain"])
         if info.startswith("Error"):
@@ -206,13 +292,16 @@ def _spotify_execute(action: str, query: str, artist: str) -> str:
         return info
 
     elif action == "album_info" and query:
-        data = _spogo_json(["search", "album", query, "--limit", "1"])
+        if not SPOGO_AUTHED:
+            hint = _INSTALL_SPOGO_MSG if not HAS_SPOGO else _AUTH_SPOGO_MSG
+            return f"Album info requires spogo. {hint}"
+        data, err = _spogo_json(["search", "album", query, "--limit", "1"])
         if not data:
-            return f"Could not find album '{query}' on Spotify."
-        albums = data if isinstance(data, list) else data.get("albums", data.get("items", []))
+            return err or f"Could not find album '{query}' on Spotify."
+        albums = data.get("items", [])
         if not albums:
             return f"Could not find album '{query}' on Spotify."
-        album_id = albums[0].get("id") or albums[0].get("uri", "")
+        album_id = albums[0].get("id", "")
         info = _spogo(["album", "info", album_id, "--plain"])
         if info.startswith("Error"):
             name = albums[0].get("name", query)
@@ -220,13 +309,19 @@ def _spotify_execute(action: str, query: str, artist: str) -> str:
         return info
 
     elif action == "list_artists":
-        result = _spogo(["library", "artists", "--limit", "50", "--plain"], timeout=30)
+        if not SPOGO_AUTHED:
+            hint = _INSTALL_SPOGO_MSG if not HAS_SPOGO else _AUTH_SPOGO_MSG
+            return f"Listing library artists requires spogo. {hint}"
+        result = _spogo(["library", "artists", "list", "--limit", "50", "--plain"], timeout=30)
         if result.startswith("Error") or not result:
             return "Could not read your Spotify library."
         return f"Artists in your Spotify library:\n{result}"
 
     elif action == "list_albums":
-        result = _spogo(["library", "albums", "--limit", "50", "--plain"], timeout=30)
+        if not SPOGO_AUTHED:
+            hint = _INSTALL_SPOGO_MSG if not HAS_SPOGO else _AUTH_SPOGO_MSG
+            return f"Listing library albums requires spogo. {hint}"
+        result = _spogo(["library", "albums", "list", "--limit", "50", "--plain"], timeout=30)
         if result.startswith("Error") or not result:
             return "Could not read your Spotify library."
         return f"Albums in your Spotify library:\n{result}"

@@ -110,6 +110,199 @@ header h1 span { color: var(--accent); }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
+/* --- Tool Cards --- */
+.tool-card {
+  align-self: flex-start;
+  width: 92%; max-width: 440px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  border-left: 3px solid var(--accent2);
+  padding: 12px 16px;
+  animation: fadeIn 0.25s ease;
+  font-size: 14px;
+}
+.tool-header {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+}
+.tool-icon { font-size: 18px; line-height: 1; }
+.tool-label {
+  font-weight: 600; font-size: 11px; text-transform: uppercase;
+  letter-spacing: 0.5px; color: var(--accent2);
+}
+.tool-detail {
+  color: var(--text-dim); font-size: 12px; margin-left: auto;
+}
+.tool-body {
+  color: var(--text); line-height: 1.5;
+}
+.tool-result-text {
+  white-space: pre-wrap; word-wrap: break-word; font-size: 13px;
+  max-height: 240px; overflow-y: auto; margin: 0;
+  background: none; border: none; padding: 0; color: var(--text);
+  font-family: inherit;
+}
+.tool-actions {
+  display: flex; gap: 6px; margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid var(--surface2); flex-wrap: wrap;
+}
+.tool-actions button {
+  background: var(--surface2); border: none; color: var(--text);
+  padding: 5px 12px; border-radius: 6px; cursor: pointer;
+  font-size: 13px; transition: all 0.15s;
+}
+.tool-actions button:hover {
+  background: var(--accent2); color: var(--bg);
+}
+
+/* Loading state */
+.tool-card.loading .tool-body { color: var(--text-dim); font-style: italic; }
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.tool-card.loading .tool-body::after {
+  content: '...'; animation: dots 1.5s infinite steps(1);
+}
+
+/* Error state */
+.tool-card.tool-error { border-left-color: var(--accent); }
+.tool-card.tool-error .tool-label { color: var(--accent); }
+
+/* Tool-specific accent colors */
+.tool-card.tool-weather { border-left-color: #60a5fa; }
+.tool-card.tool-weather .tool-label { color: #60a5fa; }
+
+.tool-card.tool-music_control { border-left-color: #e94560; }
+.tool-card.tool-music_control .tool-label { color: #e94560; }
+
+.tool-card.tool-smart_home { border-left-color: #f59e0b; }
+.tool-card.tool-smart_home .tool-label { color: #f59e0b; }
+
+.tool-card.tool-reminders { border-left-color: #22c55e; }
+.tool-card.tool-reminders .tool-label { color: #22c55e; }
+
+.tool-card.tool-notes { border-left-color: #f97316; }
+.tool-card.tool-notes .tool-label { color: #f97316; }
+
+.tool-card.tool-summarize { border-left-color: #a78bfa; }
+.tool-card.tool-summarize .tool-label { color: #a78bfa; }
+
+.tool-card.tool-messaging { border-left-color: #06b6d4; }
+.tool-card.tool-messaging .tool-label { color: #06b6d4; }
+
+/* --- Music-specific --- */
+.music-info { display: flex; flex-direction: column; gap: 2px; }
+.music-track { font-weight: 600; font-size: 15px; }
+.music-artist { color: var(--text-dim); font-size: 13px; }
+.music-status { font-size: 13px; color: var(--text-dim); }
+
+/* --- Smart Home-specific --- */
+.smart-status {
+  display: flex; align-items: center; gap: 8px; font-size: 14px;
+}
+.smart-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+}
+.smart-dot.on { background: #22c55e; box-shadow: 0 0 6px #22c55e88; }
+.smart-dot.off { background: #666; }
+.smart-target { font-weight: 500; }
+.smart-state { color: var(--text-dim); font-size: 12px; text-transform: uppercase; }
+.smart-brightness {
+  margin-top: 6px; height: 4px; background: var(--surface2);
+  border-radius: 2px; overflow: hidden;
+}
+.smart-brightness-fill {
+  height: 100%; background: #f59e0b; border-radius: 2px;
+  transition: width 0.3s;
+}
+
+/* --- Reminders-specific --- */
+.reminder-list { display: flex; flex-direction: column; gap: 4px; }
+.reminder-item {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 4px 0; font-size: 13px;
+}
+.reminder-check { color: var(--text-dim); flex-shrink: 0; }
+.reminder-added {
+  display: flex; align-items: center; gap: 8px; font-size: 14px;
+}
+.reminder-due {
+  margin-left: auto; color: var(--text-dim); font-size: 12px;
+}
+
+/* --- Notes-specific --- */
+.note-inner {
+  background: rgba(249, 115, 22, 0.06);
+  border: 1px solid rgba(249, 115, 22, 0.15);
+  border-radius: 8px; padding: 10px 12px;
+}
+.note-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+.note-preview { color: var(--text-dim); font-size: 13px; }
+.notes-list { display: flex; flex-direction: column; gap: 3px; }
+.notes-list-item { font-size: 13px; padding: 2px 0; }
+
+/* --- Summarize-specific --- */
+.summary-source {
+  font-size: 11px; color: var(--text-dim); margin-bottom: 6px;
+  text-transform: uppercase; letter-spacing: 0.3px;
+}
+.summary-text { font-size: 13px; line-height: 1.6; }
+
+/* --- Messaging-specific --- */
+.msg-sent { display: flex; flex-direction: column; gap: 4px; }
+.msg-to { font-size: 12px; color: var(--text-dim); }
+.msg-bubble {
+  background: var(--user-bg); padding: 8px 12px; border-radius: 10px;
+  border-bottom-right-radius: 4px; align-self: flex-start;
+  font-size: 14px; max-width: 90%;
+}
+.msg-status-sent {
+  font-size: 11px; color: #22c55e; align-self: flex-end;
+}
+.msg-history { display: flex; flex-direction: column; gap: 4px; }
+.msg-history-item { font-size: 13px; padding: 2px 0; }
+.msg-history-item .msg-sender {
+  font-weight: 600; font-size: 11px; text-transform: uppercase;
+  color: var(--text-dim); margin-right: 6px;
+}
+
+/* --- Quick Actions Bar --- */
+#quick-actions {
+  display: flex; gap: 4px; margin-bottom: 8px;
+  overflow-x: auto; scrollbar-width: none;
+  padding: 2px 0;
+}
+#quick-actions::-webkit-scrollbar { display: none; }
+
+.qa-btn {
+  background: var(--surface2); border: 1px solid transparent;
+  color: var(--text); padding: 5px 10px; border-radius: 18px;
+  cursor: pointer; font-size: 13px; white-space: nowrap;
+  transition: all 0.15s; flex-shrink: 0;
+  display: flex; align-items: center; gap: 4px;
+}
+.qa-btn:hover {
+  border-color: var(--accent2); background: rgba(78,205,196,0.1);
+}
+.qa-btn:active { transform: scale(0.95); }
+.qa-icon { font-size: 14px; }
+.qa-label { font-size: 11px; }
+
+.qa-sep { margin-left: 4px; }
+
+/* Music controls group */
+.qa-group {
+  display: flex; gap: 2px; background: var(--surface2); border-radius: 18px;
+  overflow: hidden; flex-shrink: 0;
+}
+.qa-group .qa-btn {
+  border-radius: 0; margin: 0; padding: 5px 8px;
+  background: transparent;
+}
+.qa-group .qa-btn:first-child { border-radius: 18px 0 0 18px; padding-left: 10px; }
+.qa-group .qa-btn:last-child { border-radius: 0 18px 18px 0; padding-right: 10px; }
+.qa-group .qa-btn:hover { background: rgba(78,205,196,0.15); }
+
 /* --- Footer --- */
 footer {
   flex-shrink: 0; padding: 12px 20px 16px;
@@ -233,6 +426,39 @@ footer {
       <div id="volume-fill"></div>
       <div id="threshold-line"></div>
     </div>
+
+    <div id="quick-actions">
+      <button class="qa-btn" data-cmd="what's the weather here" title="Check weather">
+        <span class="qa-icon">&#9925;</span><span class="qa-label">Weather</span>
+      </button>
+      <div class="qa-group">
+        <button class="qa-btn" data-cmd="play the previous track" title="Previous track">
+          <span class="qa-icon">&#9198;</span>
+        </button>
+        <button class="qa-btn" data-cmd="pause the music" title="Play / Pause">
+          <span class="qa-icon">&#9199;</span>
+        </button>
+        <button class="qa-btn" data-cmd="skip to the next track" title="Next track">
+          <span class="qa-icon">&#9197;</span>
+        </button>
+        <button class="qa-btn" data-cmd="what song is currently playing" title="Now playing">
+          <span class="qa-icon">&#127925;</span>
+        </button>
+      </div>
+      <button class="qa-btn qa-sep" data-cmd="list the lights" title="Show lights">
+        <span class="qa-icon">&#128161;</span><span class="qa-label">Lights</span>
+      </button>
+      <button class="qa-btn" data-cmd="show my reminders for today" title="Today's reminders">
+        <span class="qa-icon">&#9989;</span><span class="qa-label">Tasks</span>
+      </button>
+      <button class="qa-btn" data-cmd="list my notes" title="List notes">
+        <span class="qa-icon">&#128221;</span><span class="qa-label">Notes</span>
+      </button>
+      <button class="qa-btn" data-cmd="show my recent messages" title="Recent messages">
+        <span class="qa-icon">&#128172;</span><span class="qa-label">Msgs</span>
+      </button>
+    </div>
+
     <div id="input-row">
       <input id="text-input" type="text" placeholder="Type a message..." autocomplete="off">
       <button id="send-btn">Send</button>
@@ -267,9 +493,9 @@ let analyser = null;
 let micStream = null;
 let mediaRecorder = null;
 
-let isListening = false;   // mic stream active
-let isRecording = false;    // MediaRecorder capturing
-let isProcessing = false;   // waiting for server response
+let isListening = false;
+let isRecording = false;
+let isProcessing = false;
 
 let vadSpeechStart = 0;
 let silenceTimer = null;
@@ -295,6 +521,20 @@ const modelSelect = document.getElementById('model-select');
 
 let currentAssistantEl = null;
 let currentThinkingEl = null;
+let currentToolCard = null;
+
+// ---------------------------------------------------------------------------
+// Tool metadata
+// ---------------------------------------------------------------------------
+const TOOL_META = {
+  weather:       { icon: '\u26C5', label: 'Weather',    accent: '#60a5fa' },
+  music_control: { icon: '\uD83C\uDFB5', label: 'Music',      accent: '#e94560' },
+  smart_home:    { icon: '\uD83D\uDCA1', label: 'Smart Home',  accent: '#f59e0b' },
+  reminders:     { icon: '\u2705', label: 'Reminders',   accent: '#22c55e' },
+  notes:         { icon: '\uD83D\uDCDD', label: 'Notes',       accent: '#f97316' },
+  summarize:     { icon: '\uD83D\uDCC4', label: 'Summary',     accent: '#a78bfa' },
+  messaging:     { icon: '\uD83D\uDCAC', label: 'Messages',    accent: '#06b6d4' },
+};
 
 // ---------------------------------------------------------------------------
 // WebSocket
@@ -307,7 +547,6 @@ function connectWS() {
     connDot.classList.add('connected');
     connDot.title = 'Connected';
     setStatus('Ready');
-    // Send initial settings
     ws.send(JSON.stringify({ type: 'set_auto_think', enabled: thinkToggle.checked }));
   };
 
@@ -344,10 +583,8 @@ function handleServerMsg(data) {
 
     case 'thinking_token':
       if (currentThinkingEl) {
-        // Keep the label, append thinking text
         const label = currentThinkingEl.querySelector('.thinking-label');
         if (label) {
-          // First token — add text node after label
           const textNode = document.createTextNode(data.token);
           currentThinkingEl.appendChild(textNode);
         } else {
@@ -365,14 +602,12 @@ function handleServerMsg(data) {
         currentThinkingEl.style.maxHeight = '40px';
         currentThinkingEl = null;
       }
-      // Now create the assistant bubble for the actual response
       currentAssistantEl = addMessage('assistant', '');
       setStatus('Responding...');
       break;
 
     case 'llm_token':
       if (!currentAssistantEl) {
-        // No thinking phase — model responded directly
         currentAssistantEl = addMessage('assistant', '');
       }
       currentAssistantEl.textContent += data.token;
@@ -386,7 +621,6 @@ function handleServerMsg(data) {
       currentAssistantEl = null;
       currentThinkingEl = null;
       isProcessing = false;
-      // Release mic in manual mode after response is done
       if (!alwaysOnToggle.checked && isListening) {
         stopListening();
       } else {
@@ -405,10 +639,15 @@ function handleServerMsg(data) {
       break;
 
     case 'tool_call':
-      const action = data.args?.action || data.name;
-      const query = data.args?.query ? `: ${data.args.query}` : '';
-      const app = data.args?.app === 'spotify' ? ' (Spotify)' : ' (Apple Music)';
-      addMessage('system', `${action}${query}${app}`);
+      currentToolCard = addToolCallCard(data.name, data.args);
+      setStatus('Running ' + (TOOL_META[data.name]?.label || data.name) + '...');
+      break;
+
+    case 'tool_result':
+      if (currentToolCard) {
+        updateToolCard(currentToolCard, data.name, data.args, data.result);
+        currentToolCard = null;
+      }
       break;
 
     case 'status':
@@ -431,7 +670,7 @@ function handleServerMsg(data) {
       break;
 
     case 'model_set':
-      addMessage('system', `Model set to ${data.model}`);
+      addMessage('system', 'Model set to ' + data.model);
       break;
   }
 }
@@ -441,7 +680,7 @@ function handleServerMsg(data) {
 // ---------------------------------------------------------------------------
 function addMessage(role, text) {
   const el = document.createElement('div');
-  el.className = `msg ${role}`;
+  el.className = 'msg ' + role;
   if (role === 'assistant' && text) {
     renderMarkdown(el, text);
   } else {
@@ -459,13 +698,9 @@ function scrollToBottom() {
 }
 
 function renderMarkdown(el, text) {
-  // Simple markdown: code blocks and inline code
   let html = escapeHtml(text);
-  // Code blocks
   html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
-  // Inline code
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-  // Bold
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   el.innerHTML = html;
 }
@@ -475,10 +710,351 @@ function escapeHtml(s) {
 }
 
 // ---------------------------------------------------------------------------
+// Tool card rendering
+// ---------------------------------------------------------------------------
+function addToolCallCard(name, args) {
+  const meta = TOOL_META[name] || { icon: '\uD83D\uDD27', label: name, accent: '#888' };
+  const el = document.createElement('div');
+  el.className = 'tool-card tool-' + name + ' loading';
+
+  const detail = getToolDetail(name, args);
+
+  el.innerHTML =
+    '<div class="tool-header">' +
+      '<span class="tool-icon">' + meta.icon + '</span>' +
+      '<span class="tool-label">' + meta.label + '</span>' +
+      (detail ? '<span class="tool-detail">' + escapeHtml(detail) + '</span>' : '') +
+    '</div>' +
+    '<div class="tool-body">Working on it</div>';
+
+  chat.appendChild(el);
+  scrollToBottom();
+  return el;
+}
+
+function getToolDetail(name, args) {
+  switch (name) {
+    case 'weather': return args.location || '';
+    case 'music_control': return formatMusicAction(args);
+    case 'smart_home': return args.target || formatAction(args.action);
+    case 'reminders': return args.title || formatAction(args.action);
+    case 'notes': return args.title || formatAction(args.action);
+    case 'summarize': return args.url ? getDomain(args.url) : '';
+    case 'messaging':
+      if (args.action === 'send') return '\u2192 ' + (args.to || '');
+      return formatAction(args.action);
+    default: return '';
+  }
+}
+
+function formatAction(action) {
+  return action ? action.replace(/_/g, ' ') : '';
+}
+
+function formatMusicAction(args) {
+  const a = args.action || '';
+  if (a === 'play_song' || a === 'play_artist' || a === 'play_album') {
+    return (args.query || '') + (args.artist ? ' \u2022 ' + args.artist : '');
+  }
+  if (a === 'search') return 'search: ' + (args.query || '');
+  return a.replace(/_/g, ' ');
+}
+
+function updateToolCard(el, name, args, result) {
+  el.classList.remove('loading');
+
+  const isError = result.startsWith('Error') || result.includes('not installed');
+  if (isError) el.classList.add('tool-error');
+
+  // Update detail if needed
+  const detailEl = el.querySelector('.tool-detail');
+  const newDetail = getResultDetail(name, args, result);
+  if (detailEl && newDetail) detailEl.textContent = newDetail;
+
+  // Render body
+  const bodyEl = el.querySelector('.tool-body');
+  bodyEl.innerHTML = renderToolBody(name, args, result);
+
+  // Add action buttons (skip on errors)
+  if (!isError) {
+    const actionsHtml = renderToolActions(name, args);
+    if (actionsHtml) {
+      const actionsEl = document.createElement('div');
+      actionsEl.className = 'tool-actions';
+      actionsEl.innerHTML = actionsHtml;
+      el.appendChild(actionsEl);
+    }
+  }
+
+  scrollToBottom();
+}
+
+function getResultDetail(name, args, result) {
+  if (name === 'music_control') {
+    const app = (args.app === 'spotify') ? 'Spotify' : 'Apple Music';
+    return app;
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Tool body renderers
+// ---------------------------------------------------------------------------
+function renderToolBody(name, args, result) {
+  switch (name) {
+    case 'weather':       return renderWeatherBody(result);
+    case 'music_control': return renderMusicBody(args, result);
+    case 'smart_home':    return renderSmartHomeBody(args, result);
+    case 'reminders':     return renderRemindersBody(args, result);
+    case 'notes':         return renderNotesBody(args, result);
+    case 'summarize':     return renderSummarizeBody(args, result);
+    case 'messaging':     return renderMessagingBody(args, result);
+    default:              return '<div class="tool-result-text">' + escapeHtml(result) + '</div>';
+  }
+}
+
+// --- Weather ---
+function renderWeatherBody(result) {
+  return '<pre class="tool-result-text">' + escapeHtml(result) + '</pre>';
+}
+
+// --- Music ---
+function renderMusicBody(args, result) {
+  // "Now playing on X: Song by Artist (Album)" or "Now playing: Song by Artist"
+  const npMatch = result.match(/Now playing[^:]*:\s*(.+)/);
+  if (npMatch) {
+    const info = npMatch[1];
+    // Apple Music returns "Song, Artist, Album" format
+    const commaParts = info.split(/,\s*/);
+    if (commaParts.length >= 2) {
+      return '<div class="music-info">' +
+        '<div class="music-track">' + escapeHtml(commaParts[0]) + '</div>' +
+        '<div class="music-artist">' + escapeHtml(commaParts.slice(1).join(' \u2022 ')) + '</div>' +
+      '</div>';
+    }
+    // Spotify returns "Song by Artist" or just "Song"
+    const byParts = info.split(/ by /);
+    if (byParts.length >= 2) {
+      return '<div class="music-info">' +
+        '<div class="music-track">' + escapeHtml(byParts[0]) + '</div>' +
+        '<div class="music-artist">' + escapeHtml(byParts.slice(1).join(' by ')) + '</div>' +
+      '</div>';
+    }
+    return '<div class="music-info"><div class="music-track">' + escapeHtml(info) + '</div></div>';
+  }
+
+  // "Playing Artist on Spotify (shuffled)."
+  const playingMatch = result.match(/Playing (.+?) on (Spotify|Apple Music)/);
+  if (playingMatch) {
+    return '<div class="music-info">' +
+      '<div class="music-track">' + escapeHtml(playingMatch[1]) + '</div>' +
+      '<div class="music-artist">' + escapeHtml(playingMatch[2]) + '</div>' +
+    '</div>';
+  }
+
+  // Multiline results (search, artist info, etc.)
+  if (result.includes('\n')) {
+    return '<pre class="tool-result-text">' + escapeHtml(result) + '</pre>';
+  }
+
+  // Simple status messages (paused, skipped, etc.)
+  return '<div class="music-status">' + escapeHtml(result) + '</div>';
+}
+
+// --- Smart Home ---
+function renderSmartHomeBody(args, result) {
+  const action = args.action || '';
+
+  if (action === 'turn_on' || action === 'turn_off') {
+    const isOn = action === 'turn_on';
+    const target = args.target || 'Light';
+    return '<div class="smart-status">' +
+      '<div class="smart-dot ' + (isOn ? 'on' : 'off') + '"></div>' +
+      '<span class="smart-target">' + escapeHtml(target) + '</span>' +
+      '<span class="smart-state">' + (isOn ? 'ON' : 'OFF') + '</span>' +
+    '</div>';
+  }
+
+  if (action === 'set_brightness') {
+    const val = parseInt(args.value) || 50;
+    const target = args.target || 'Light';
+    return '<div class="smart-status">' +
+      '<div class="smart-dot on"></div>' +
+      '<span class="smart-target">' + escapeHtml(target) + '</span>' +
+      '<span class="smart-state">' + val + '%</span>' +
+    '</div>' +
+    '<div class="smart-brightness"><div class="smart-brightness-fill" style="width:' + val + '%"></div></div>';
+  }
+
+  if (action === 'set_color') {
+    const target = args.target || 'Light';
+    const color = args.value || '';
+    return '<div class="smart-status">' +
+      '<div class="smart-dot on" style="background:' + escapeHtml(color) + ';box-shadow:0 0 6px ' + escapeHtml(color) + '88"></div>' +
+      '<span class="smart-target">' + escapeHtml(target) + '</span>' +
+      '<span class="smart-state">' + escapeHtml(color) + '</span>' +
+    '</div>';
+  }
+
+  // List lights/rooms/scenes
+  return '<pre class="tool-result-text">' + escapeHtml(result) + '</pre>';
+}
+
+// --- Reminders ---
+function renderRemindersBody(args, result) {
+  if (args.action === 'add') {
+    return '<div class="reminder-added">' +
+      '<span class="reminder-check">\u2610</span>' +
+      '<span>' + escapeHtml(args.title || result) + '</span>' +
+      (args.due ? '<span class="reminder-due">' + escapeHtml(args.due) + '</span>' : '') +
+    '</div>';
+  }
+
+  // View reminders - format lines as a list
+  const lines = result.split('\n').filter(function(l) { return l.trim(); });
+  if (lines.length > 1) {
+    return '<div class="reminder-list">' +
+      lines.map(function(l) {
+        return '<div class="reminder-item">' +
+          '<span class="reminder-check">\u2610</span>' +
+          '<span>' + escapeHtml(l.trim()) + '</span>' +
+        '</div>';
+      }).join('') +
+    '</div>';
+  }
+
+  return '<div class="tool-result-text">' + escapeHtml(result) + '</div>';
+}
+
+// --- Notes ---
+function renderNotesBody(args, result) {
+  if (args.action === 'create') {
+    return '<div class="note-inner">' +
+      '<div class="note-title">' + escapeHtml(args.title || 'Untitled') + '</div>' +
+      (args.body ? '<div class="note-preview">' + escapeHtml(args.body) + '</div>' : '') +
+    '</div>';
+  }
+
+  // List/search results
+  const lines = result.split('\n').filter(function(l) { return l.trim(); });
+  if (lines.length > 1) {
+    return '<div class="notes-list">' +
+      lines.map(function(l) {
+        return '<div class="notes-list-item">\uD83D\uDCC4 ' + escapeHtml(l.trim()) + '</div>';
+      }).join('') +
+    '</div>';
+  }
+
+  return '<div class="tool-result-text">' + escapeHtml(result) + '</div>';
+}
+
+// --- Summarize ---
+function renderSummarizeBody(args, result) {
+  let header = '';
+  if (args.url) {
+    const domain = getDomain(args.url);
+    const isYT = args.url.includes('youtube.com') || args.url.includes('youtu.be');
+    header = '<div class="summary-source">' +
+      (isYT ? '\u25B6 YouTube \u2022 ' : '') + escapeHtml(domain) +
+    '</div>';
+  }
+  return header + '<div class="tool-result-text summary-text">' + escapeHtml(result) + '</div>';
+}
+
+// --- Messaging ---
+function renderMessagingBody(args, result) {
+  if (args.action === 'send') {
+    return '<div class="msg-sent">' +
+      '<div class="msg-to">To: ' + escapeHtml(args.to || 'Unknown') + '</div>' +
+      '<div class="msg-bubble">' + escapeHtml(args.text || '') + '</div>' +
+      '<div class="msg-status-sent">\u2713 Sent</div>' +
+    '</div>';
+  }
+
+  // Chat history - try to format sender: text pairs
+  if (args.action === 'read_chat' && result.includes(':')) {
+    const lines = result.split('\n').filter(function(l) { return l.trim(); });
+    if (lines.length > 1) {
+      return '<div class="msg-history">' +
+        lines.map(function(l) {
+          const m = l.trim().match(/^\s*(You|Them|[^:]+):\s*(.+)/);
+          if (m) {
+            return '<div class="msg-history-item">' +
+              '<span class="msg-sender">' + escapeHtml(m[1]) + '</span>' +
+              escapeHtml(m[2]) +
+            '</div>';
+          }
+          return '<div class="msg-history-item">' + escapeHtml(l.trim()) + '</div>';
+        }).join('') +
+      '</div>';
+    }
+  }
+
+  return '<pre class="tool-result-text">' + escapeHtml(result) + '</pre>';
+}
+
+// ---------------------------------------------------------------------------
+// Tool action buttons
+// ---------------------------------------------------------------------------
+function renderToolActions(name, args) {
+  switch (name) {
+    case 'music_control':
+      return '<button onclick="quickAction(\'play the previous track\')">\u23EE</button>' +
+        '<button onclick="quickAction(\'pause the music\')">\u23EF</button>' +
+        '<button onclick="quickAction(\'skip to the next track\')">\u23ED</button>' +
+        '<button onclick="quickAction(\'what song is currently playing\')">\uD83C\uDFB5 Now</button>';
+
+    case 'smart_home':
+      if (args.target && (args.action === 'turn_on' || args.action === 'turn_off')) {
+        const opposite = args.action === 'turn_on' ? 'turn off' : 'turn on';
+        return '<button onclick="quickAction(\'' + opposite + ' ' + escapeHtml(args.target).replace(/'/g,"\\'") + '\')">' +
+          (args.action === 'turn_on' ? 'Turn Off' : 'Turn On') + '</button>';
+      }
+      return null;
+
+    case 'reminders':
+      if (args.action !== 'add') {
+        return '<button onclick="quickAction(\'show today\\\'s reminders\')">Today</button>' +
+          '<button onclick="quickAction(\'show overdue reminders\')">Overdue</button>';
+      }
+      return null;
+
+    case 'notes':
+      if (args.action !== 'create') {
+        return '<button onclick="quickAction(\'list my notes\')">All Notes</button>';
+      }
+      return null;
+
+    default:
+      return null;
+  }
+}
+
+function getDomain(url) {
+  try { return new URL(url).hostname; } catch(e) { return url; }
+}
+
+// ---------------------------------------------------------------------------
+// Quick Actions
+// ---------------------------------------------------------------------------
+function quickAction(text) {
+  if (!ws || ws.readyState !== 1 || isProcessing) return;
+  ws.send(JSON.stringify({ type: 'text_input', text: text }));
+  isProcessing = true;
+  updateMicState();
+}
+
+document.querySelectorAll('.qa-btn[data-cmd]').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    quickAction(btn.dataset.cmd);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Text input
 // ---------------------------------------------------------------------------
 sendBtn.addEventListener('click', sendText);
-textInput.addEventListener('keydown', (e) => {
+textInput.addEventListener('keydown', function(e) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(); }
 });
 
@@ -494,7 +1070,7 @@ function sendText() {
 // ---------------------------------------------------------------------------
 // Model select
 // ---------------------------------------------------------------------------
-modelSelect.addEventListener('change', () => {
+modelSelect.addEventListener('change', function() {
   if (ws && ws.readyState === 1) {
     ws.send(JSON.stringify({ type: 'set_model', model: modelSelect.value }));
   }
@@ -503,7 +1079,7 @@ modelSelect.addEventListener('change', () => {
 // ---------------------------------------------------------------------------
 // Clear
 // ---------------------------------------------------------------------------
-clearBtn.addEventListener('click', () => {
+clearBtn.addEventListener('click', function() {
   if (ws && ws.readyState === 1) {
     ws.send(JSON.stringify({ type: 'clear' }));
   }
@@ -542,7 +1118,7 @@ function stopListening() {
     mediaRecorder.stop();
   }
   if (micStream) {
-    micStream.getTracks().forEach(t => t.stop());
+    micStream.getTracks().forEach(function(t) { t.stop(); });
     micStream = null;
   }
   if (audioCtx) {
@@ -565,7 +1141,7 @@ function monitorVolume() {
 
   const data = new Uint8Array(analyser.frequencyBinCount);
   analyser.getByteFrequencyData(data);
-  const rms = Math.sqrt(data.reduce((a, v) => a + v * v, 0) / data.length);
+  const rms = Math.sqrt(data.reduce(function(a, v) { return a + v * v; }, 0) / data.length);
 
   const pct = Math.min(100, (rms / 80) * 100);
   volumeFill.style.width = pct + '%';
@@ -573,7 +1149,6 @@ function monitorVolume() {
   const threshold = parseInt(sensitivitySlider.value);
   thresholdLine.style.left = Math.min(100, (threshold / 80) * 100) + '%';
 
-  // VAD logic only in always-on mode
   if (alwaysOnToggle.checked && !isProcessing) {
     vadLogic(rms, threshold);
   }
@@ -595,7 +1170,7 @@ function vadLogic(rms, threshold) {
   }
 
   if (rms <= threshold && isRecording && !silenceTimer) {
-    silenceTimer = setTimeout(() => {
+    silenceTimer = setTimeout(function() {
       const duration = Date.now() - vadSpeechStart;
       if (duration >= MIN_SPEECH_MS) {
         stopRecording();
@@ -615,23 +1190,22 @@ function startRecording() {
   isRecording = true;
   updateMicState();
 
-  // Detect supported MIME type
   const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg', 'audio/mp4', ''];
   let mimeType = '';
   for (const t of types) {
     if (!t || MediaRecorder.isTypeSupported(t)) { mimeType = t; break; }
   }
 
-  const opts = mimeType ? { mimeType } : {};
+  const opts = mimeType ? { mimeType: mimeType } : {};
   mediaRecorder = new MediaRecorder(micStream, opts);
 
-  mediaRecorder.ondataavailable = (e) => {
+  mediaRecorder.ondataavailable = function(e) {
     if (e.data.size > 0 && ws && ws.readyState === 1) {
       ws.send(e.data);
     }
   };
 
-  mediaRecorder.onstop = () => {
+  mediaRecorder.onstop = function() {
     if (ws && ws.readyState === 1) {
       ws.send(JSON.stringify({ type: 'audio_end' }));
     }
@@ -664,18 +1238,16 @@ function cancelRecording() {
 }
 
 // ---------------------------------------------------------------------------
-// Mic button — click to start recording, click again to send
+// Mic button
 // ---------------------------------------------------------------------------
-micBtn.addEventListener('click', async () => {
+micBtn.addEventListener('click', async function() {
   if (isProcessing) return;
 
-  // Currently recording → stop and send (works in both modes)
   if (isRecording) {
     stopRecording();
     return;
   }
 
-  // Always-on mode: mic button toggles listening on/off (VAD handles recording)
   if (alwaysOnToggle.checked) {
     if (isListening) {
       stopListening();
@@ -685,7 +1257,6 @@ micBtn.addEventListener('click', async () => {
     return;
   }
 
-  // Manual mode: start mic if needed, then start recording
   if (!isListening) {
     await startListening();
     if (!isListening) return;
@@ -742,7 +1313,7 @@ if (localStorage.getItem('model')) {
   modelSelect.value = localStorage.getItem('model');
 }
 
-alwaysOnToggle.addEventListener('change', () => {
+alwaysOnToggle.addEventListener('change', function() {
   localStorage.setItem('alwaysOn', alwaysOnToggle.checked);
   if (alwaysOnToggle.checked && !isListening) {
     startListening();
@@ -752,19 +1323,19 @@ alwaysOnToggle.addEventListener('change', () => {
   }
   updateMicState();
 });
-sensitivitySlider.addEventListener('input', () => {
+sensitivitySlider.addEventListener('input', function() {
   localStorage.setItem('sensitivity', sensitivitySlider.value);
 });
-ttsToggle.addEventListener('change', () => {
+ttsToggle.addEventListener('change', function() {
   localStorage.setItem('tts', ttsToggle.checked);
 });
-thinkToggle.addEventListener('change', () => {
+thinkToggle.addEventListener('change', function() {
   localStorage.setItem('autoThink', thinkToggle.checked);
   if (ws && ws.readyState === 1) {
     ws.send(JSON.stringify({ type: 'set_auto_think', enabled: thinkToggle.checked }));
   }
 });
-modelSelect.addEventListener('change', () => {
+modelSelect.addEventListener('change', function() {
   localStorage.setItem('model', modelSelect.value);
 });
 
