@@ -1,8 +1,14 @@
 # 🦀 Hermit Crab
 
-Your own voice assistant that runs **100% locally**. Talk to it, type to it, and let it control your stuff. Nothing leaves your machine.
+**A local-first, voice-native alternative to [OpenClaw](https://github.com/AiCEG/openclaw).**
 
-🎙️ Whisper STT → 🧠 Ollama LLM → 🌐 Web UI
+Same idea — an AI assistant that controls your music, lights, messages, and more. But Hermit Crab runs entirely on your machine. No cloud APIs for the brain, no mystery network calls, no API keys for the core experience.
+
+> **🔒 Local by default.** Whisper transcribes your voice locally. Ollama runs the LLM locally. Your conversations, commands, and data never leave your machine.
+>
+> **🎙️ Voice-native.** Built around speech from day one — not bolted on. Push-to-talk or always-on with voice activity detection.
+>
+> **🔍 Transparent.** ~400 lines of Python. No framework magic, no hidden abstractions. You can read the entire codebase in 15 minutes and understand exactly what happens when you say "turn off the lights."
 
 ## 🚀 Get Started
 
@@ -29,6 +35,20 @@ Just ask naturally — Hermit Crab figures out the right tool.
 | 💬 | **Messaging** | "Text John I'm running late" | `brew install steipete/tap/imsg` + Full Disk Access |
 
 Tools that need a CLI will tell you the exact install command if it's missing. The quick actions bar in the UI gives you one-tap shortcuts for the most common stuff.
+
+## 🦀 vs 🦞 How is this different from OpenClaw?
+
+| | Hermit Crab | OpenClaw |
+|---|---|---|
+| **LLM** | Runs locally via Ollama — no API key, no cloud | Cloud LLMs (OpenAI, Anthropic, etc.) |
+| **Voice** | Built-in Whisper STT + always-on VAD | Add-on via skills |
+| **Privacy** | Everything on your machine | Conversations go through cloud APIs |
+| **Networking** | `localhost` only — zero outbound by default | Requires internet for LLM |
+| **Skills/Tools** | Python files in `tools/`, auto-discovered | SKILL.md + scripts directories |
+| **Setup** | `./setup.sh && ./run.sh` | Requires Claude Code / Codex CLI |
+| **Codebase** | ~400 lines, single file backend | Larger framework with skill marketplace |
+
+Hermit Crab shares many of the same tool ideas (and CLI dependencies) as OpenClaw, but wraps them in a simpler, local-first, voice-first package. If you want cloud-powered intelligence with a huge skill ecosystem, use OpenClaw. If you want something private, hackable, and self-contained, try the crab. 🦀
 
 ## 🎤 Two Ways to Talk
 
