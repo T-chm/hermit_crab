@@ -293,12 +293,51 @@ def _try_direct_dispatch(text: str, memory: "MemoryManager | None" = None) -> tu
     lower = text.lower().strip()
     clean = lower.rstrip("?.!")
 
+    # === Set default music app (preference, not a tool call) ===
+    m = re.search(
+        r"\b(?:switch|set|change|use)\b.*\b(spotify|apple\s*music)\b.*\b(?:for\s+)?(?:music|player|app|default)\b",
+        lower,
+    )
+    if not m:
+        m = re.search(
+            r"\b(?:switch|set|change|use)\b.*\b(?:music|player|app|default)\b.*\b(?:to\s+)?(spotify|apple\s*music)\b",
+            lower,
+        )
+    if not m:
+        # "change to apple music", "switch to spotify"
+        m = re.search(
+            r"\b(?:switch|change)\s+to\s+(spotify|apple\s*music)\b",
+            lower,
+        )
+    if m:
+        app = "spotify" if "spotify" in m.group(1) else "apple_music"
+        if memory:
+            # Update or add the preference in core facts
+            memory.core_facts = [
+                f for f in memory.core_facts
+                if "music" not in f.lower() or "prefer" not in f.lower()
+            ]
+            label = "Spotify" if app == "spotify" else "Apple Music"
+            memory.core_facts.append(f"Prefers {label} for music")
+            memory._save_core()
+        # Return a special sentinel — caller will handle as a status message
+        return ("_set_preference", {"key": "music_app", "value": app})
+
     # === Music control (checked BEFORE weather to avoid "sunny weather" → weather) ===
     def _music_app() -> dict:
         if "spotify" in lower:
             return {"app": "spotify"}
         if "apple music" in lower:
             return {"app": "apple_music"}
+        # Check memory for stored preference
+        if memory:
+            for fact in memory.core_facts:
+                fl = fact.lower()
+                if "prefer" in fl and "music" in fl:
+                    if "spotify" in fl:
+                        return {"app": "spotify"}
+                    if "apple" in fl:
+                        return {"app": "apple_music"}
         return {}
 
     # Simple playback: pause, skip, next, previous, current track
@@ -552,6 +591,18 @@ async def stream_ollama(ws: WebSocket, history: list, model: str,
 
         # --- Fast path: direct dispatch for obvious tool requests (saves ~3.5s) ---
         direct = _try_direct_dispatch(last_user, memory) if matched_tools else None
+        if direct and direct[0] == "_set_preference":
+            # Handle preference changes without a tool call
+            key, value = direct[1]["key"], direct[1]["value"]
+            label = "Spotify" if value == "spotify" else "Apple Music"
+            reply = f"Got it! I've set {label} as your default music player."
+            history.append({"role": "assistant", "content": reply})
+            await ws.send_json({"type": "llm_token", "token": reply})
+            await ws.send_json({"type": "llm_done", "text": reply, "timing": {"first_token_ms": 0, "total_ms": 0}})
+            await ws.send_json({"type": "memory_status", **memory.memory_status()})
+            print(f"[perf] preference_set: {key}={value}", flush=True)
+            return
+
         if direct:
             tool_name, tool_args = direct
             print(f"[perf] direct_dispatch: {tool_name}({tool_args})", flush=True)

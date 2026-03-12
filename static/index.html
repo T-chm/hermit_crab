@@ -18,29 +18,29 @@ tailwind.config = {
       },
       colors: {
         md: {
-          primary:                '#80cbc4',
-          'on-primary':           '#003731',
-          'primary-ctr':          '#005048',
-          'on-primary-ctr':       '#a7f3ec',
-          secondary:              '#f48fb1',
+          primary:                '#c586f7',
+          'on-primary':           '#1a0a2e',
+          'primary-ctr':          '#2d1b4e',
+          'on-primary-ctr':       '#e0c0ff',
+          secondary:              '#f472b6',
           'secondary-ctr':        '#6b2c47',
           error:                  '#ffb4ab',
           'error-ctr':            '#93000a',
-          surface:                '#121218',
-          'surface-ctr-low':      '#1b1b22',
-          'surface-ctr':          '#1f1f28',
-          'surface-ctr-high':     '#2a2a33',
-          'surface-ctr-highest':  '#35353f',
-          'on-surface':           '#e6e1e6',
-          'on-surface-var':       '#c9c5ca',
-          outline:                '#938f94',
-          'outline-var':          '#49454e',
+          surface:                '#0a0a1a',
+          'surface-ctr-low':      '#0f0f24',
+          'surface-ctr':          '#141428',
+          'surface-ctr-high':     '#1c1c36',
+          'surface-ctr-highest':  '#252545',
+          'on-surface':           '#e8e4f0',
+          'on-surface-var':       '#a8a4b4',
+          outline:                '#6e6a7a',
+          'outline-var':          '#2e2b4a',
         }
       },
       boxShadow: {
-        'md-1': '0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.5)',
-        'md-2': '0 3px 6px rgba(0,0,0,0.35), 0 3px 4px rgba(0,0,0,0.4)',
-        'md-3': '0 6px 12px rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.35)',
+        'md-1': '0 1px 3px rgba(0,0,0,0.5), 0 0 8px rgba(140,80,220,0.08)',
+        'md-2': '0 3px 8px rgba(0,0,0,0.4), 0 0 12px rgba(140,80,220,0.1)',
+        'md-3': '0 6px 16px rgba(0,0,0,0.35), 0 0 20px rgba(140,80,220,0.12)',
       }
     }
   }
@@ -50,22 +50,25 @@ tailwind.config = {
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --md-primary:               #80cbc4;
-  --md-on-primary:            #003731;
-  --md-primary-ctr:           #005048;
-  --md-on-primary-ctr:        #a7f3ec;
-  --md-secondary:             #f48fb1;
+  --md-primary:               #c586f7;
+  --md-on-primary:            #1a0a2e;
+  --md-primary-ctr:           #2d1b4e;
+  --md-on-primary-ctr:        #e0c0ff;
+  --md-secondary:             #f472b6;
   --md-secondary-ctr:         #6b2c47;
   --md-error:                 #ffb4ab;
-  --md-surface:               #121218;
-  --md-surface-ctr-low:       #1b1b22;
-  --md-surface-ctr:           #1f1f28;
-  --md-surface-ctr-high:      #2a2a33;
-  --md-surface-ctr-highest:   #35353f;
-  --md-on-surface:            #e6e1e6;
-  --md-on-surface-var:        #c9c5ca;
-  --md-outline:               #938f94;
-  --md-outline-var:           #49454e;
+  --md-surface:               #0a0a1a;
+  --md-surface-ctr-low:       #0f0f24;
+  --md-surface-ctr:           #141428;
+  --md-surface-ctr-high:      #1c1c36;
+  --md-surface-ctr-highest:   #252545;
+  --md-on-surface:            #e8e4f0;
+  --md-on-surface-var:        #a8a4b4;
+  --md-outline:               #6e6a7a;
+  --md-outline-var:           #2e2b4a;
+  --md-glow:                  rgba(160,100,240,0.15);
+  --md-glow-border:           rgba(160,100,240,0.3);
+  --md-gradient:              linear-gradient(135deg, #e040a0, #8040e0);
 }
 
 html, body { height: 100%; }
@@ -77,8 +80,12 @@ html, body { height: 100%; }
   to   { opacity: 1; transform: translateY(0); }
 }
 @keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 4px rgba(244,63,94,0.25); }
-  50%      { box-shadow: 0 0 0 14px rgba(244,63,94,0.05); }
+  0%, 100% { box-shadow: 0 0 0 4px rgba(244,114,182,0.25); }
+  50%      { box-shadow: 0 0 0 14px rgba(244,114,182,0.05); }
+}
+@keyframes glowPulse {
+  0%, 100% { border-color: var(--md-glow-border); box-shadow: 0 0 12px var(--md-glow); }
+  50%      { border-color: rgba(160,100,240,0.5); box-shadow: 0 0 20px rgba(160,100,240,0.25); }
 }
 @keyframes dots {
   0%,20%  { content: '.'; }
@@ -89,8 +96,8 @@ html, body { height: 100%; }
 /* ---- Scrollbar ---- */
 #chat::-webkit-scrollbar { width: 8px; }
 #chat::-webkit-scrollbar-track { background: transparent; }
-#chat::-webkit-scrollbar-thumb { background: var(--md-outline-var); border-radius: 4px; }
-#chat::-webkit-scrollbar-thumb:hover { background: var(--md-outline); }
+#chat::-webkit-scrollbar-thumb { background: rgba(160,100,240,0.2); border-radius: 4px; }
+#chat::-webkit-scrollbar-thumb:hover { background: rgba(160,100,240,0.4); }
 #quick-actions::-webkit-scrollbar { display: none; }
 
 /* ================================================================
@@ -99,84 +106,86 @@ html, body { height: 100%; }
 
 /* ---- Messages ---- */
 .msg {
-  max-width: 78%; padding: 16px 22px; border-radius: 20px;
-  line-height: 1.7; white-space: pre-wrap; word-wrap: break-word;
-  animation: fadeIn 0.25s ease; font-size: 1.125rem;
+  max-width: 78%; padding: 10px 16px; border-radius: 14px;
+  line-height: 1.55; white-space: pre-wrap; word-wrap: break-word;
+  animation: fadeIn 0.25s ease; font-size: 0.875rem;
 }
 .msg.user {
   align-self: flex-end; background: var(--md-primary-ctr); color: var(--md-on-primary-ctr);
-  border-bottom-right-radius: 6px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  border-bottom-right-radius: 4px;
+  border: 1px solid rgba(160,100,240,0.2);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3), 0 0 8px rgba(160,100,240,0.08);
 }
 .msg.assistant {
   align-self: flex-start; background: var(--md-surface-ctr-high); color: var(--md-on-surface);
-  border-bottom-left-radius: 6px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  border-bottom-left-radius: 4px;
+  border: 1px solid var(--md-outline-var);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
 }
 .msg.system {
-  align-self: center; color: var(--md-on-surface-var); font-size: 1rem;
-  background: none; padding: 8px 0;
+  align-self: center; color: var(--md-on-surface-var); font-size: 0.813rem;
+  background: none; padding: 6px 0;
 }
 .msg.error {
-  align-self: center; color: var(--md-error); font-size: 1rem;
+  align-self: center; color: var(--md-error); font-size: 0.813rem;
   background: rgba(255,180,171,0.08); border: 1px solid rgba(255,180,171,0.2);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 .msg.thinking {
-  align-self: flex-start; color: var(--md-on-surface-var); font-size: 0.938rem;
-  background: rgba(128,203,196,0.05); border: 1px solid rgba(128,203,196,0.12);
-  font-style: italic; max-height: 100px; overflow-y: auto; border-radius: 12px;
+  align-self: flex-start; color: var(--md-on-surface-var); font-size: 0.813rem;
+  background: rgba(160,100,240,0.04); border: 1px solid rgba(160,100,240,0.15);
+  font-style: italic; max-height: 80px; overflow-y: auto; border-radius: 10px;
 }
 .thinking-label {
   color: var(--md-primary); font-weight: 500; font-style: normal;
-  font-size: 0.813rem; text-transform: uppercase; letter-spacing: 0.8px;
-  margin-bottom: 6px; display: block;
+  font-size: 0.688rem; text-transform: uppercase; letter-spacing: 0.8px;
+  margin-bottom: 4px; display: block;
 }
 .thinking-dots::after { content: '...'; animation: dots 1.5s infinite steps(1); }
 
 .msg code {
-  background: rgba(255,255,255,0.08); padding: 2px 8px; border-radius: 6px;
-  font-family: 'Roboto Mono', 'SF Mono', monospace; font-size: 1rem;
+  background: rgba(255,255,255,0.08); padding: 1px 6px; border-radius: 4px;
+  font-family: 'Roboto Mono', 'SF Mono', monospace; font-size: 0.813rem;
 }
 .msg pre {
-  background: rgba(0,0,0,0.4); padding: 16px; border-radius: 12px;
-  overflow-x: auto; margin: 10px 0;
+  background: rgba(0,0,0,0.4); padding: 12px; border-radius: 10px;
+  overflow-x: auto; margin: 8px 0;
 }
 .msg pre code { background: none; padding: 0; }
 
 /* ---- Tool Cards ---- */
 .tool-card {
-  align-self: flex-start; width: 92%; max-width: 560px;
+  align-self: flex-start; width: 92%; max-width: 480px;
   background: var(--md-surface-ctr); color: var(--md-on-surface);
-  border-radius: 16px; border: 1px solid var(--md-outline-var);
-  border-left: 4px solid var(--md-primary);
-  padding: 20px 24px; animation: fadeIn 0.25s ease; font-size: 1.125rem;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  border-radius: 12px; border: 1px solid var(--md-glow-border);
+  border-left: 3px solid var(--md-primary);
+  padding: 14px 18px; animation: fadeIn 0.25s ease; font-size: 0.875rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3), 0 0 12px var(--md-glow);
 }
 .tool-header {
-  display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
 }
-.tool-icon { font-size: 1.5rem; line-height: 1; }
+.tool-icon { font-size: 1.125rem; line-height: 1; }
 .tool-label {
-  font-weight: 500; font-size: 0.875rem; text-transform: uppercase;
+  font-weight: 500; font-size: 0.688rem; text-transform: uppercase;
   letter-spacing: 0.8px; color: var(--md-primary);
 }
-.tool-detail { color: var(--md-on-surface-var); font-size: 1rem; margin-left: auto; }
-.tool-body { color: var(--md-on-surface); line-height: 1.65; }
+.tool-detail { color: var(--md-on-surface-var); font-size: 0.813rem; margin-left: auto; }
+.tool-body { color: var(--md-on-surface); line-height: 1.55; }
 .tool-result-text {
-  white-space: pre-wrap; word-wrap: break-word; font-size: 1.063rem;
-  max-height: 300px; overflow-y: auto; margin: 0;
+  white-space: pre-wrap; word-wrap: break-word; font-size: 0.813rem;
+  max-height: 260px; overflow-y: auto; margin: 0;
   background: none; border: none; padding: 0; color: var(--md-on-surface);
   font-family: inherit;
 }
 .tool-actions {
-  display: flex; gap: 10px; margin-top: 16px; padding-top: 16px;
+  display: flex; gap: 8px; margin-top: 12px; padding-top: 12px;
   border-top: 1px solid var(--md-outline-var); flex-wrap: wrap;
 }
 .tool-actions button {
   background: var(--md-surface-ctr-high); border: 1px solid var(--md-outline-var);
-  color: var(--md-on-surface); padding: 10px 20px; border-radius: 20px;
-  cursor: pointer; font-size: 1rem; transition: all 0.2s; font-family: inherit;
+  color: var(--md-on-surface); padding: 6px 14px; border-radius: 16px;
+  cursor: pointer; font-size: 0.813rem; transition: all 0.2s; font-family: inherit;
   font-weight: 500;
 }
 .tool-actions button:hover {
@@ -197,68 +206,68 @@ html, body { height: 100%; }
 .tool-card.tool-weather .tool-label { color: #64b5f6; }
 .tool-card.tool-music_control { border-left-color: #f48fb1; }
 .tool-card.tool-music_control .tool-label { color: #f48fb1; }
-.tool-card.tool-smart_home { border-left-color: #ffb74d; }
-.tool-card.tool-smart_home .tool-label { color: #ffb74d; }
+.tool-card.tool-smart_home { border-left-color: #ffd54f; }
+.tool-card.tool-smart_home .tool-label { color: #ffd54f; }
 .tool-card.tool-reminders { border-left-color: #81c784; }
 .tool-card.tool-reminders .tool-label { color: #81c784; }
-.tool-card.tool-notes { border-left-color: #ffb74d; }
-.tool-card.tool-notes .tool-label { color: #ffb74d; }
+.tool-card.tool-notes { border-left-color: #ce93d8; }
+.tool-card.tool-notes .tool-label { color: #ce93d8; }
 .tool-card.tool-summarize { border-left-color: #b39ddb; }
 .tool-card.tool-summarize .tool-label { color: #b39ddb; }
 .tool-card.tool-messaging { border-left-color: #4dd0e1; }
 .tool-card.tool-messaging .tool-label { color: #4dd0e1; }
 
 /* ---- Music ---- */
-.music-info { display: flex; flex-direction: column; gap: 4px; }
-.music-track { font-weight: 500; font-size: 1.25rem; }
-.music-artist { color: var(--md-on-surface-var); font-size: 1.063rem; }
-.music-status { font-size: 1.063rem; color: var(--md-on-surface-var); }
+.music-info { display: flex; flex-direction: column; gap: 2px; }
+.music-track { font-weight: 500; font-size: 0.938rem; }
+.music-artist { color: var(--md-on-surface-var); font-size: 0.813rem; }
+.music-status { font-size: 0.813rem; color: var(--md-on-surface-var); }
 
 /* ---- Smart Home ---- */
-.smart-status { display: flex; align-items: center; gap: 12px; font-size: 1.125rem; }
-.smart-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
-.smart-dot.on { background: #81c784; box-shadow: 0 0 10px #81c78488; }
+.smart-status { display: flex; align-items: center; gap: 10px; font-size: 0.875rem; }
+.smart-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.smart-dot.on { background: #81c784; box-shadow: 0 0 8px #81c78488; }
 .smart-dot.off { background: var(--md-outline); }
 .smart-target { font-weight: 500; }
-.smart-state { color: var(--md-on-surface-var); font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.8px; }
-.smart-brightness { margin-top: 10px; height: 6px; background: var(--md-surface-ctr-high); border-radius: 3px; overflow: hidden; }
-.smart-brightness-fill { height: 100%; background: #ffb74d; border-radius: 3px; transition: width 0.3s; }
+.smart-state { color: var(--md-on-surface-var); font-size: 0.688rem; text-transform: uppercase; letter-spacing: 0.8px; }
+.smart-brightness { margin-top: 8px; height: 4px; background: var(--md-surface-ctr-high); border-radius: 2px; overflow: hidden; }
+.smart-brightness-fill { height: 100%; background: var(--md-primary); border-radius: 2px; transition: width 0.3s; }
 
 /* ---- Reminders ---- */
-.reminder-list { display: flex; flex-direction: column; gap: 8px; }
-.reminder-item { display: flex; align-items: flex-start; gap: 12px; padding: 6px 0; font-size: 1.063rem; }
+.reminder-list { display: flex; flex-direction: column; gap: 6px; }
+.reminder-item { display: flex; align-items: flex-start; gap: 10px; padding: 4px 0; font-size: 0.813rem; }
 .reminder-check { color: var(--md-on-surface-var); flex-shrink: 0; }
-.reminder-added { display: flex; align-items: center; gap: 12px; font-size: 1.125rem; }
-.reminder-due { margin-left: auto; color: var(--md-on-surface-var); font-size: 0.875rem; }
+.reminder-added { display: flex; align-items: center; gap: 10px; font-size: 0.875rem; }
+.reminder-due { margin-left: auto; color: var(--md-on-surface-var); font-size: 0.75rem; }
 
 /* ---- Notes ---- */
 .note-inner {
-  background: rgba(255,183,77,0.06); border: 1px solid rgba(255,183,77,0.15);
-  border-radius: 12px; padding: 14px 18px;
+  background: rgba(160,100,240,0.06); border: 1px solid rgba(160,100,240,0.15);
+  border-radius: 10px; padding: 10px 14px;
 }
-.note-title { font-weight: 500; font-size: 1.125rem; margin-bottom: 6px; }
-.note-preview { color: var(--md-on-surface-var); font-size: 1.063rem; }
-.notes-list { display: flex; flex-direction: column; gap: 6px; }
-.notes-list-item { font-size: 1.063rem; padding: 4px 0; }
+.note-title { font-weight: 500; font-size: 0.875rem; margin-bottom: 4px; }
+.note-preview { color: var(--md-on-surface-var); font-size: 0.813rem; }
+.notes-list { display: flex; flex-direction: column; gap: 4px; }
+.notes-list-item { font-size: 0.813rem; padding: 3px 0; }
 
 /* ---- Summarize ---- */
-.summary-source { font-size: 0.813rem; color: var(--md-on-surface-var); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
-.summary-text { font-size: 1.063rem; line-height: 1.75; }
+.summary-source { font-size: 0.688rem; color: var(--md-on-surface-var); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+.summary-text { font-size: 0.813rem; line-height: 1.65; }
 
 /* ---- Messaging ---- */
-.msg-sent { display: flex; flex-direction: column; gap: 6px; }
-.msg-to { font-size: 0.875rem; color: var(--md-on-surface-var); }
+.msg-sent { display: flex; flex-direction: column; gap: 4px; }
+.msg-to { font-size: 0.75rem; color: var(--md-on-surface-var); }
 .msg-bubble {
   background: var(--md-primary-ctr); color: var(--md-on-primary-ctr);
-  padding: 12px 18px; border-radius: 16px; border-bottom-right-radius: 4px;
-  align-self: flex-start; font-size: 1.063rem; max-width: 90%;
+  padding: 8px 14px; border-radius: 12px; border-bottom-right-radius: 4px;
+  align-self: flex-start; font-size: 0.813rem; max-width: 90%;
 }
-.msg-status-sent { font-size: 0.813rem; color: #81c784; align-self: flex-end; }
-.msg-history { display: flex; flex-direction: column; gap: 6px; }
-.msg-history-item { font-size: 1.063rem; padding: 4px 0; }
+.msg-status-sent { font-size: 0.688rem; color: #81c784; align-self: flex-end; }
+.msg-history { display: flex; flex-direction: column; gap: 4px; }
+.msg-history-item { font-size: 0.813rem; padding: 3px 0; }
 .msg-history-item .msg-sender {
-  font-weight: 500; font-size: 0.813rem; text-transform: uppercase;
-  color: var(--md-on-surface-var); margin-right: 10px; letter-spacing: 0.3px;
+  font-weight: 500; font-size: 0.688rem; text-transform: uppercase;
+  color: var(--md-on-surface-var); margin-right: 8px; letter-spacing: 0.3px;
 }
 
 /* ---- Mic button states ---- */
@@ -266,21 +275,21 @@ html, body { height: 100%; }
   background: var(--md-primary-ctr) !important;
   border-color: var(--md-primary) !important;
   color: var(--md-primary) !important;
-  box-shadow: 0 0 0 4px rgba(128,203,196,0.2), 0 3px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 0 0 3px rgba(160,100,240,0.2), 0 0 10px rgba(160,100,240,0.15);
 }
 #mic-btn.recording {
-  background: rgba(244,143,177,0.15) !important;
+  background: rgba(244,114,182,0.15) !important;
   border-color: var(--md-secondary) !important;
   color: var(--md-secondary) !important;
   animation: pulse 1s infinite;
 }
 #mic-btn.processing {
-  border-color: #ffb74d !important; color: #ffb74d !important;
+  border-color: var(--md-primary) !important; color: var(--md-primary) !important;
   pointer-events: none; opacity: 0.6;
 }
 
 /* ---- Connection dot ---- */
-#connection-dot.connected { background: var(--md-primary) !important; }
+#connection-dot.connected { background: #81c784 !important; }
 
 /* ================================================================
    Agent Mode
@@ -292,34 +301,35 @@ html, body { height: 100%; }
 .agent-container {
   align-self: stretch; width: 100%;
   background: var(--md-surface-ctr-low);
-  border: 1px solid rgba(255,183,77,0.25);
-  border-left: 4px solid #ffb74d;
-  border-radius: 16px; padding: 0;
+  border: 1px solid rgba(160,100,240,0.25);
+  border-left: 3px solid var(--md-primary);
+  border-radius: 12px; padding: 0;
   animation: fadeIn 0.3s ease;
   overflow: hidden;
+  box-shadow: 0 0 16px var(--md-glow);
 }
 .agent-header {
-  display: flex; align-items: center; gap: 12px;
-  padding: 18px 24px; background: rgba(255,183,77,0.06);
-  border-bottom: 1px solid rgba(255,183,77,0.12);
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 18px; background: rgba(160,100,240,0.06);
+  border-bottom: 1px solid rgba(160,100,240,0.12);
 }
 .agent-badge {
-  background: #ffb74d; color: #1b1b22;
-  font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 1px; padding: 4px 10px; border-radius: 6px;
+  background: var(--md-primary); color: var(--md-on-primary);
+  font-size: 0.625rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; padding: 3px 8px; border-radius: 4px;
 }
 .agent-badge.running { animation: agentPulse 2s infinite; }
 .agent-badge.done { background: #81c784; }
 .agent-badge.stopped { background: var(--md-outline); }
 .agent-badge.error { background: var(--md-error); }
 .agent-goal {
-  flex: 1; font-size: 1rem; color: var(--md-on-surface);
+  flex: 1; font-size: 0.813rem; color: var(--md-on-surface);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .agent-stop-btn {
   background: rgba(255,180,171,0.1); border: 1px solid rgba(255,180,171,0.3);
-  color: var(--md-error); padding: 6px 16px; border-radius: 12px;
-  cursor: pointer; font-size: 0.875rem; font-weight: 500; font-family: inherit;
+  color: var(--md-error); padding: 4px 12px; border-radius: 10px;
+  cursor: pointer; font-size: 0.75rem; font-weight: 500; font-family: inherit;
   transition: all 0.2s;
 }
 .agent-stop-btn:hover {
@@ -327,23 +337,23 @@ html, body { height: 100%; }
 }
 
 .agent-plan {
-  padding: 16px 24px;
+  padding: 12px 18px;
   border-bottom: 1px solid var(--md-outline-var);
 }
 .agent-plan-title {
-  font-size: 0.75rem; font-weight: 500; text-transform: uppercase;
-  letter-spacing: 0.8px; color: #ffb74d; margin-bottom: 10px;
+  font-size: 0.625rem; font-weight: 500; text-transform: uppercase;
+  letter-spacing: 0.8px; color: var(--md-primary); margin-bottom: 8px;
 }
 .agent-plan-list {
   list-style: none; display: flex; flex-direction: column; gap: 6px;
 }
 .agent-plan-item {
-  display: flex; align-items: flex-start; gap: 10px;
-  font-size: 0.938rem; color: var(--md-on-surface-var);
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 0.813rem; color: var(--md-on-surface-var);
 }
 .agent-plan-num {
-  color: #ffb74d; font-weight: 700; font-size: 0.813rem;
-  min-width: 20px; text-align: center; padding-top: 1px;
+  color: var(--md-primary); font-weight: 700; font-size: 0.688rem;
+  min-width: 18px; text-align: center; padding-top: 1px;
 }
 .agent-plan-item.active { color: var(--md-on-surface); font-weight: 500; }
 .agent-plan-item.done { color: var(--md-on-surface-var); opacity: 0.6; }
@@ -353,117 +363,117 @@ html, body { height: 100%; }
   display: flex; flex-direction: column;
 }
 .agent-step {
-  padding: 16px 24px;
+  padding: 12px 18px;
   border-bottom: 1px solid var(--md-outline-var);
 }
 .agent-step:last-child { border-bottom: none; }
 .agent-step-header {
-  display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+  display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
 }
 .agent-step-num {
-  background: rgba(255,183,77,0.15); color: #ffb74d;
-  width: 26px; height: 26px; border-radius: 50%;
+  background: rgba(160,100,240,0.15); color: var(--md-primary);
+  width: 22px; height: 22px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
+  font-size: 0.625rem; font-weight: 700; flex-shrink: 0;
 }
 .agent-step.completed .agent-step-num {
   background: rgba(129,199,132,0.15); color: #81c784;
 }
 .agent-step-desc {
-  font-size: 0.938rem; color: var(--md-on-surface); font-weight: 500;
+  font-size: 0.813rem; color: var(--md-on-surface); font-weight: 500;
 }
 .agent-step-status {
-  margin-left: auto; font-size: 0.75rem; text-transform: uppercase;
+  margin-left: auto; font-size: 0.625rem; text-transform: uppercase;
   letter-spacing: 0.5px; color: var(--md-on-surface-var);
 }
 .agent-step-body {
-  margin-left: 36px; font-size: 0.938rem; color: var(--md-on-surface-var);
-  line-height: 1.6;
+  margin-left: 30px; font-size: 0.813rem; color: var(--md-on-surface-var);
+  line-height: 1.5;
 }
 .agent-step-body .tool-card {
-  width: 100%; max-width: 100%; margin-top: 8px;
-  font-size: 1rem;
+  width: 100%; max-width: 100%; margin-top: 6px;
+  font-size: 0.813rem;
 }
 .agent-step-text {
   white-space: pre-wrap; word-wrap: break-word;
-  margin-top: 6px; font-size: 0.938rem;
+  margin-top: 4px; font-size: 0.813rem;
 }
 
 .agent-summary {
-  padding: 18px 24px;
+  padding: 12px 18px;
   background: rgba(129,199,132,0.06);
   border-top: 1px solid rgba(129,199,132,0.15);
 }
 .agent-summary-title {
-  font-size: 0.75rem; font-weight: 500; text-transform: uppercase;
-  letter-spacing: 0.8px; color: #81c784; margin-bottom: 8px;
+  font-size: 0.625rem; font-weight: 500; text-transform: uppercase;
+  letter-spacing: 0.8px; color: #81c784; margin-bottom: 6px;
 }
 .agent-summary-text {
-  font-size: 1rem; color: var(--md-on-surface); line-height: 1.65;
+  font-size: 0.813rem; color: var(--md-on-surface); line-height: 1.55;
 }
 
 /* Agent mode toggle highlight */
-#agent-toggle:checked + span { color: #ffb74d; }
+#agent-toggle:checked + span { color: var(--md-primary); }
 
 /* ================================================================
    Memory
    ================================================================ */
 .memory-chip {
-  display: flex; align-items: center; gap: 6px;
+  display: flex; align-items: center; gap: 4px;
   background: var(--md-surface-ctr-high); border: 1px solid var(--md-outline-var);
-  border-radius: 20px; padding: 4px 12px 4px 8px;
-  cursor: pointer; transition: all 0.2s; font-size: 0.813rem;
+  border-radius: 16px; padding: 3px 10px 3px 7px;
+  cursor: pointer; transition: all 0.2s; font-size: 0.75rem;
   color: var(--md-on-surface-var); user-select: none;
 }
 .memory-chip:hover {
-  border-color: #ce93d8; color: #ce93d8;
+  border-color: var(--md-primary); color: var(--md-primary);
 }
 .memory-chip.has-facts {
-  border-color: rgba(206,147,216,0.3); color: #ce93d8;
+  border-color: rgba(160,100,240,0.3); color: var(--md-primary);
 }
-.memory-chip .mem-icon { font-size: 1rem; line-height: 1; }
+.memory-chip .mem-icon { font-size: 0.875rem; line-height: 1; }
 .memory-chip .mem-count { font-weight: 500; }
 
 .memory-panel {
-  display: none; position: absolute; top: 100%; right: 0; margin-top: 8px;
-  width: 360px; max-height: 420px; overflow-y: auto;
-  background: var(--md-surface-ctr); border: 1px solid var(--md-outline-var);
-  border-radius: 16px; padding: 0;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  display: none; position: absolute; top: 100%; right: 0; margin-top: 6px;
+  width: 320px; max-height: 380px; overflow-y: auto;
+  background: var(--md-surface-ctr); border: 1px solid var(--md-glow-border);
+  border-radius: 12px; padding: 0;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 16px var(--md-glow);
   z-index: 50; animation: fadeIn 0.15s ease;
 }
 .memory-panel.open { display: block; }
 .memory-panel-section {
-  padding: 14px 18px; border-bottom: 1px solid var(--md-outline-var);
+  padding: 10px 14px; border-bottom: 1px solid var(--md-outline-var);
 }
 .memory-panel-section:last-child { border-bottom: none; }
 .memory-panel-title {
-  font-size: 0.688rem; font-weight: 600; text-transform: uppercase;
-  letter-spacing: 0.8px; color: #ce93d8; margin-bottom: 8px;
+  font-size: 0.625rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.8px; color: var(--md-primary); margin-bottom: 6px;
 }
 .memory-fact {
-  font-size: 0.875rem; color: var(--md-on-surface); padding: 3px 0;
-  line-height: 1.5;
+  font-size: 0.75rem; color: var(--md-on-surface); padding: 2px 0;
+  line-height: 1.45;
 }
 .memory-session {
-  font-size: 0.813rem; color: var(--md-on-surface-var); padding: 4px 0;
-  line-height: 1.5;
+  font-size: 0.75rem; color: var(--md-on-surface-var); padding: 3px 0;
+  line-height: 1.45;
 }
 .memory-session-date {
-  font-size: 0.688rem; color: var(--md-outline); margin-right: 6px;
+  font-size: 0.625rem; color: var(--md-outline); margin-right: 5px;
 }
 .memory-working {
-  font-size: 0.813rem; color: var(--md-on-surface-var);
-  font-style: italic; line-height: 1.5;
+  font-size: 0.75rem; color: var(--md-on-surface-var);
+  font-style: italic; line-height: 1.45;
 }
 .memory-empty {
-  font-size: 0.813rem; color: var(--md-outline); font-style: italic;
+  font-size: 0.75rem; color: var(--md-outline); font-style: italic;
 }
 .memory-clear-btn {
   width: 100%; background: transparent; border: 1px solid rgba(255,180,171,0.2);
-  color: var(--md-error); padding: 8px; border-radius: 10px;
-  cursor: pointer; font-size: 0.813rem; font-weight: 500; font-family: inherit;
-  transition: all 0.2s; margin-top: 4px;
+  color: var(--md-error); padding: 6px; border-radius: 8px;
+  cursor: pointer; font-size: 0.75rem; font-weight: 500; font-family: inherit;
+  transition: all 0.2s; margin-top: 3px;
 }
 .memory-clear-btn:hover {
   background: rgba(255,180,171,0.08); border-color: var(--md-error);
@@ -474,15 +484,15 @@ html, body { height: 100%; }
 <div id="app" class="flex flex-col h-dvh max-w-[1200px] mx-auto">
 
   <!-- ==================== Header ==================== -->
-  <header class="flex items-center justify-between px-8 py-5 shrink-0 bg-md-surface-ctr border-b border-md-outline-var shadow-md-1">
-    <div class="flex items-center gap-4">
-      <h1 class="text-[28px] font-bold tracking-tight">
+  <header class="flex items-center justify-between px-5 py-3 shrink-0 bg-md-surface-ctr-low border-b border-md-outline-var shadow-md-1">
+    <div class="flex items-center gap-3">
+      <h1 class="text-base font-bold tracking-tight">
         <span>&#129408;</span> Hermit Crab
       </h1>
-      <div id="connection-dot" class="w-3 h-3 rounded-full bg-md-error transition-colors duration-300" title="Disconnected"></div>
-      <span id="status-text" class="text-base text-md-on-surface-var max-w-[280px] overflow-hidden text-ellipsis whitespace-nowrap">Connecting...</span>
+      <div id="connection-dot" class="w-2 h-2 rounded-full bg-md-error transition-colors duration-300" title="Disconnected"></div>
+      <span id="status-text" class="text-xs text-md-on-surface-var max-w-[240px] overflow-hidden text-ellipsis whitespace-nowrap">Connecting...</span>
     </div>
-    <div class="flex items-center gap-4 relative">
+    <div class="flex items-center gap-3 relative">
       <div id="memory-chip" class="memory-chip" onclick="toggleMemoryPanel()" title="Memory">
         <span class="mem-icon">&#129504;</span>
         <span id="mem-count" class="mem-count">0</span>
@@ -504,7 +514,7 @@ html, body { height: 100%; }
           <button class="memory-clear-btn" onclick="clearMemory()">Clear all memory</button>
         </div>
       </div>
-      <select id="model-select" class="text-base bg-md-surface-ctr-high text-md-on-surface border border-md-outline-var rounded-xl px-4 py-2.5 cursor-pointer outline-none focus:border-md-primary transition-colors font-sans font-medium">
+      <select id="model-select" class="text-xs bg-md-surface-ctr-high text-md-on-surface border border-md-outline-var rounded-lg px-3 py-1.5 cursor-pointer outline-none focus:border-md-primary transition-colors font-sans font-medium">
         <option value="qwen3.5:4b" selected>qwen3.5:4b</option>
         <option value="qwen2.5:7b">qwen2.5:7b</option>
         <option value="qwen2.5:3b">qwen2.5:3b</option>
@@ -515,82 +525,82 @@ html, body { height: 100%; }
   </header>
 
   <!-- ==================== Chat ==================== -->
-  <div id="chat" class="flex-1 overflow-y-auto px-8 py-6 flex flex-col gap-5 scroll-smooth">
+  <div id="chat" class="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3 scroll-smooth">
     <div class="msg system">Welcome. Click the mic or type below to start.</div>
   </div>
 
   <!-- ==================== Footer ==================== -->
-  <footer class="shrink-0 px-8 pt-4 pb-6 bg-md-surface-ctr border-t border-md-outline-var shadow-md-2">
+  <footer class="shrink-0 px-5 pt-3 pb-4 bg-md-surface-ctr-low border-t border-md-outline-var shadow-md-2">
 
     <!-- Volume meter -->
-    <div id="volume-container" class="h-1.5 bg-md-surface-ctr-low rounded-full overflow-hidden relative mb-4">
+    <div id="volume-container" class="h-1 bg-md-surface-ctr-low rounded-full overflow-hidden relative mb-3">
       <div id="volume-fill" class="h-full rounded-full bg-md-primary transition-all duration-75" style="width:0%"></div>
       <div id="threshold-line" class="absolute top-0 h-full w-0.5 bg-md-secondary" style="left:15%"></div>
     </div>
 
     <!-- Quick actions -->
-    <div id="quick-actions" class="flex gap-3 mb-4 overflow-x-auto pb-1" style="scrollbar-width:none">
-      <button class="qa-btn flex items-center gap-2 bg-md-surface-ctr-high text-md-on-surface px-5 py-3 rounded-full text-base whitespace-nowrap shrink-0 border border-md-outline-var cursor-pointer transition-all duration-200 hover:bg-md-primary hover:text-md-on-primary hover:border-md-primary hover:shadow-md-1 active:scale-[0.97] font-medium" data-cmd="what's the weather here" title="Check weather">
-        <span class="text-lg leading-none">&#9925;</span><span>Weather</span>
+    <div id="quick-actions" class="flex gap-2 mb-3 overflow-x-auto pb-1" style="scrollbar-width:none">
+      <button class="qa-btn flex items-center gap-1.5 bg-md-surface-ctr-high text-md-on-surface-var px-3 py-1.5 rounded-full text-xs whitespace-nowrap shrink-0 border border-md-outline-var cursor-pointer transition-all duration-200 hover:bg-md-primary hover:text-md-on-primary hover:border-md-primary hover:shadow-md-1 active:scale-[0.97] font-medium" data-cmd="what's the weather here" title="Check weather">
+        <span class="text-sm leading-none">&#9925;</span><span>Weather</span>
       </button>
       <div class="flex bg-md-surface-ctr-high rounded-full overflow-hidden shrink-0 border border-md-outline-var">
-        <button class="qa-btn bg-transparent text-md-on-surface px-4 py-3 border-none cursor-pointer transition-all duration-200 hover:bg-md-primary/20" data-cmd="play the previous track" title="Previous track">
-          <span class="text-lg leading-none">&#9198;</span>
+        <button class="qa-btn bg-transparent text-md-on-surface-var px-2.5 py-1.5 border-none cursor-pointer transition-all duration-200 hover:bg-md-primary/20 text-sm" data-cmd="play the previous track" title="Previous track">
+          <span class="leading-none">&#9198;</span>
         </button>
-        <button class="qa-btn bg-transparent text-md-on-surface px-4 py-3 border-none cursor-pointer transition-all duration-200 hover:bg-md-primary/20" data-cmd="pause the music" title="Play / Pause">
-          <span class="text-lg leading-none">&#9199;</span>
+        <button class="qa-btn bg-transparent text-md-on-surface-var px-2.5 py-1.5 border-none cursor-pointer transition-all duration-200 hover:bg-md-primary/20 text-sm" data-cmd="pause the music" title="Play / Pause">
+          <span class="leading-none">&#9199;</span>
         </button>
-        <button class="qa-btn bg-transparent text-md-on-surface px-4 py-3 border-none cursor-pointer transition-all duration-200 hover:bg-md-primary/20" data-cmd="skip to the next track" title="Next track">
-          <span class="text-lg leading-none">&#9197;</span>
+        <button class="qa-btn bg-transparent text-md-on-surface-var px-2.5 py-1.5 border-none cursor-pointer transition-all duration-200 hover:bg-md-primary/20 text-sm" data-cmd="skip to the next track" title="Next track">
+          <span class="leading-none">&#9197;</span>
         </button>
-        <button class="qa-btn bg-transparent text-md-on-surface px-4 py-3 border-none cursor-pointer transition-all duration-200 hover:bg-md-primary/20" data-cmd="what song is currently playing" title="Now playing">
-          <span class="text-lg leading-none">&#127925;</span>
+        <button class="qa-btn bg-transparent text-md-on-surface-var px-2.5 py-1.5 border-none cursor-pointer transition-all duration-200 hover:bg-md-primary/20 text-sm" data-cmd="what song is currently playing" title="Now playing">
+          <span class="leading-none">&#127925;</span>
         </button>
       </div>
-      <button class="qa-btn flex items-center gap-2 bg-md-surface-ctr-high text-md-on-surface px-5 py-3 rounded-full text-base whitespace-nowrap shrink-0 border border-md-outline-var cursor-pointer transition-all duration-200 hover:bg-md-primary hover:text-md-on-primary hover:border-md-primary hover:shadow-md-1 active:scale-[0.97] font-medium" data-cmd="list the lights" title="Show lights">
-        <span class="text-lg leading-none">&#128161;</span><span>Lights</span>
+      <button class="qa-btn flex items-center gap-1.5 bg-md-surface-ctr-high text-md-on-surface-var px-3 py-1.5 rounded-full text-xs whitespace-nowrap shrink-0 border border-md-outline-var cursor-pointer transition-all duration-200 hover:bg-md-primary hover:text-md-on-primary hover:border-md-primary hover:shadow-md-1 active:scale-[0.97] font-medium" data-cmd="list the lights" title="Show lights">
+        <span class="text-sm leading-none">&#128161;</span><span>Lights</span>
       </button>
-      <button class="qa-btn flex items-center gap-2 bg-md-surface-ctr-high text-md-on-surface px-5 py-3 rounded-full text-base whitespace-nowrap shrink-0 border border-md-outline-var cursor-pointer transition-all duration-200 hover:bg-md-primary hover:text-md-on-primary hover:border-md-primary hover:shadow-md-1 active:scale-[0.97] font-medium" data-cmd="show my reminders for today" title="Today's reminders">
-        <span class="text-lg leading-none">&#9989;</span><span>Tasks</span>
+      <button class="qa-btn flex items-center gap-1.5 bg-md-surface-ctr-high text-md-on-surface-var px-3 py-1.5 rounded-full text-xs whitespace-nowrap shrink-0 border border-md-outline-var cursor-pointer transition-all duration-200 hover:bg-md-primary hover:text-md-on-primary hover:border-md-primary hover:shadow-md-1 active:scale-[0.97] font-medium" data-cmd="show my reminders for today" title="Today's reminders">
+        <span class="text-sm leading-none">&#9989;</span><span>Tasks</span>
       </button>
-      <button class="qa-btn flex items-center gap-2 bg-md-surface-ctr-high text-md-on-surface px-5 py-3 rounded-full text-base whitespace-nowrap shrink-0 border border-md-outline-var cursor-pointer transition-all duration-200 hover:bg-md-primary hover:text-md-on-primary hover:border-md-primary hover:shadow-md-1 active:scale-[0.97] font-medium" data-cmd="list my notes" title="List notes">
-        <span class="text-lg leading-none">&#128221;</span><span>Notes</span>
+      <button class="qa-btn flex items-center gap-1.5 bg-md-surface-ctr-high text-md-on-surface-var px-3 py-1.5 rounded-full text-xs whitespace-nowrap shrink-0 border border-md-outline-var cursor-pointer transition-all duration-200 hover:bg-md-primary hover:text-md-on-primary hover:border-md-primary hover:shadow-md-1 active:scale-[0.97] font-medium" data-cmd="list my notes" title="List notes">
+        <span class="text-sm leading-none">&#128221;</span><span>Notes</span>
       </button>
-      <button class="qa-btn flex items-center gap-2 bg-md-surface-ctr-high text-md-on-surface px-5 py-3 rounded-full text-base whitespace-nowrap shrink-0 border border-md-outline-var cursor-pointer transition-all duration-200 hover:bg-md-primary hover:text-md-on-primary hover:border-md-primary hover:shadow-md-1 active:scale-[0.97] font-medium" data-cmd="show my recent messages" title="Recent messages">
-        <span class="text-lg leading-none">&#128172;</span><span>Messages</span>
+      <button class="qa-btn flex items-center gap-1.5 bg-md-surface-ctr-high text-md-on-surface-var px-3 py-1.5 rounded-full text-xs whitespace-nowrap shrink-0 border border-md-outline-var cursor-pointer transition-all duration-200 hover:bg-md-primary hover:text-md-on-primary hover:border-md-primary hover:shadow-md-1 active:scale-[0.97] font-medium" data-cmd="show my recent messages" title="Recent messages">
+        <span class="text-sm leading-none">&#128172;</span><span>Messages</span>
       </button>
     </div>
 
     <!-- Input row -->
-    <div id="input-row" class="flex gap-4 items-center">
+    <div id="input-row" class="flex gap-2.5 items-center">
       <input id="text-input" type="text" placeholder="Type a message..." autocomplete="off"
-        class="flex-1 bg-md-surface-ctr-low text-md-on-surface border-2 border-md-outline-var rounded-2xl px-6 py-4 text-lg outline-none transition-all duration-200 focus:border-md-primary focus:shadow-md-1 placeholder:text-md-on-surface-var/50 font-sans">
-      <button id="send-btn" class="bg-md-primary text-md-on-primary font-medium rounded-2xl px-8 py-4 border-none cursor-pointer text-lg whitespace-nowrap transition-all duration-200 hover:shadow-md-2 hover:brightness-110 active:scale-[0.97] flex items-center gap-2">
-        <span class="material-symbols-rounded text-[22px]">send</span>
+        class="flex-1 bg-md-surface-ctr text-md-on-surface border border-md-outline-var rounded-xl px-4 py-2.5 text-sm outline-none transition-all duration-200 focus:border-md-primary placeholder:text-md-on-surface-var/50 font-sans" style="transition: border-color 0.2s, box-shadow 0.2s" onfocus="this.style.boxShadow='0 0 0 2px rgba(160,100,240,0.15), 0 0 10px rgba(160,100,240,0.08)'" onblur="this.style.boxShadow='none'">
+      <button id="send-btn" class="text-white font-medium rounded-xl px-5 py-2.5 border-none cursor-pointer text-sm whitespace-nowrap transition-all duration-200 hover:shadow-md-2 hover:brightness-110 active:scale-[0.97] flex items-center gap-1.5" style="background: linear-gradient(135deg, #e040a0, #8040e0)">
+        <span class="material-symbols-rounded text-[16px]">send</span>
         Send
       </button>
-      <button id="mic-btn" class="w-14 h-14 rounded-2xl border-2 border-md-outline-var bg-md-surface-ctr-high text-md-on-surface cursor-pointer flex items-center justify-center transition-colors duration-200 shrink-0 hover:border-md-primary hover:bg-md-primary-ctr" title="Click to start listening" style="font-size:28px;line-height:1">&#127908;</button>
+      <button id="mic-btn" class="w-10 h-10 rounded-xl border border-md-outline-var bg-md-surface-ctr-high text-md-on-surface cursor-pointer flex items-center justify-center transition-colors duration-200 shrink-0 hover:border-md-primary hover:bg-md-primary-ctr" title="Click to start listening" style="font-size:20px;line-height:1">&#127908;</button>
     </div>
 
     <!-- Controls row -->
-    <div id="controls-row" class="flex items-center gap-6 mt-4 text-base text-md-on-surface-var flex-wrap">
-      <label class="flex items-center gap-2 cursor-pointer select-none hover:text-md-on-surface transition-colors">
-        <input type="checkbox" id="always-on-toggle" class="w-4 h-4 accent-[#80cbc4]"> Always listen
+    <div id="controls-row" class="flex items-center gap-4 mt-2.5 text-xs text-md-on-surface-var flex-wrap">
+      <label class="flex items-center gap-1.5 cursor-pointer select-none hover:text-md-on-surface transition-colors">
+        <input type="checkbox" id="always-on-toggle" class="w-3.5 h-3.5 accent-[#c586f7]"> Always listen
       </label>
-      <label class="flex items-center gap-2 cursor-pointer select-none hover:text-md-on-surface transition-colors">
+      <label class="flex items-center gap-1.5 cursor-pointer select-none hover:text-md-on-surface transition-colors">
         Sensitivity
-        <input type="range" id="sensitivity-slider" min="3" max="60" value="15" class="w-24 accent-[#80cbc4]">
+        <input type="range" id="sensitivity-slider" min="3" max="60" value="15" class="w-20 accent-[#c586f7]">
       </label>
-      <label class="flex items-center gap-2 cursor-pointer select-none hover:text-md-on-surface transition-colors">
-        <input type="checkbox" id="think-toggle" class="w-4 h-4 accent-[#80cbc4]"> Auto think
+      <label class="flex items-center gap-1.5 cursor-pointer select-none hover:text-md-on-surface transition-colors">
+        <input type="checkbox" id="think-toggle" class="w-3.5 h-3.5 accent-[#c586f7]"> Auto think
       </label>
-      <label class="flex items-center gap-2 cursor-pointer select-none hover:text-md-on-surface transition-colors">
-        <input type="checkbox" id="agent-toggle" class="w-4 h-4 accent-[#ffb74d]"> <span>Agent mode</span>
+      <label class="flex items-center gap-1.5 cursor-pointer select-none hover:text-md-on-surface transition-colors">
+        <input type="checkbox" id="agent-toggle" class="w-3.5 h-3.5 accent-[#c586f7]"> <span>Agent mode</span>
       </label>
-      <label class="flex items-center gap-2 cursor-pointer select-none hover:text-md-on-surface transition-colors">
-        <input type="checkbox" id="tts-toggle" class="w-4 h-4 accent-[#80cbc4]"> Speak replies
+      <label class="flex items-center gap-1.5 cursor-pointer select-none hover:text-md-on-surface transition-colors">
+        <input type="checkbox" id="tts-toggle" class="w-3.5 h-3.5 accent-[#c586f7]"> Speak replies
       </label>
-      <button id="clear-btn" class="ml-auto bg-transparent border border-md-outline-var text-md-on-surface-var rounded-xl px-5 py-2 cursor-pointer text-base transition-all duration-200 hover:border-md-error hover:text-md-error hover:bg-md-error/5 font-medium">
+      <button id="clear-btn" class="ml-auto bg-transparent border border-md-outline-var text-md-on-surface-var rounded-lg px-3 py-1 cursor-pointer text-xs transition-all duration-200 hover:border-md-error hover:text-md-error hover:bg-md-error/5 font-medium">
         Clear chat
       </button>
     </div>
@@ -660,9 +670,9 @@ let agentRunning = false;
 const TOOL_META = {
   weather:       { icon: '\u26C5', label: 'Weather',    accent: '#64b5f6' },
   music_control: { icon: '\uD83C\uDFB5', label: 'Music',      accent: '#f48fb1' },
-  smart_home:    { icon: '\uD83D\uDCA1', label: 'Smart Home',  accent: '#ffb74d' },
+  smart_home:    { icon: '\uD83D\uDCA1', label: 'Smart Home',  accent: '#ffd54f' },
   reminders:     { icon: '\u2705', label: 'Reminders',   accent: '#81c784' },
-  notes:         { icon: '\uD83D\uDCDD', label: 'Notes',       accent: '#ffb74d' },
+  notes:         { icon: '\uD83D\uDCDD', label: 'Notes',       accent: '#ce93d8' },
   summarize:     { icon: '\uD83D\uDCC4', label: 'Summary',     accent: '#b39ddb' },
   messaging:     { icon: '\uD83D\uDCAC', label: 'Messages',    accent: '#4dd0e1' },
 };
