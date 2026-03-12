@@ -233,6 +233,25 @@ _TOOL_KEYWORD_MAP = {
     "messaging": [
         "text ", "message", "send", "sms", "call ",
     ],
+    "stocks": [
+        "stock", "share price", "ticker", "market", "s&p", "dow",
+        "nasdaq", "crypto", "bitcoin", "ethereum", "portfolio",
+        "watchlist", "price of", "how is", "trading at",
+    ],
+    "gmail": [
+        "email", "emails", "inbox", "unread", "gmail", "mail",
+        "send email", "send an email", "compose", "check mail",
+    ],
+    "calendar": [
+        "calendar", "schedule", "meeting", "meetings", "agenda",
+        "event", "events", "appointment", "free", "busy", "booked",
+        "what's on", "what do i have",
+    ],
+    "trips": [
+        "trip", "trips", "travel", "flight", "flights", "hotel", "hotels",
+        "vacation", "booking", "itinerary", "airbnb", "boarding pass",
+        "car rental", "train ticket", "upcoming trip", "travel plan",
+    ],
 }
 
 # Build lookup: tool_name -> TOOLS entry
@@ -487,6 +506,182 @@ def _try_direct_dispatch(text: str, memory: "MemoryManager | None" = None) -> tu
     # "read my messages" / "show messages" / "list chats"
     if re.search(r"\b(?:read|show|check|list)\s+(?:my\s+)?(?:messages|chats|texts|conversations)\b", lower):
         return ("messaging", {"action": "list_chats"})
+
+    # === Gmail ===
+    # "check my email" / "any new emails" / "show my inbox" / "unread emails"
+    if re.search(r"\b(?:check|show|any|read|open)\s+(?:my\s+)?(?:email|emails|inbox|mail|gmail)\b", lower):
+        return ("gmail", {"action": "unread"})
+    if re.search(r"\b(?:unread|new)\s+(?:email|emails|mail)\b", lower):
+        return ("gmail", {"action": "unread"})
+    # "search emails for X" / "find email from X" / "emails about X"
+    m = re.search(r"\b(?:search|find|look for)\s+(?:my\s+)?(?:email|emails|mail)\s+(?:about|from|for|regarding)\s+(.+)", lower)
+    if m:
+        return ("gmail", {"action": "search", "query": m.group(1).strip().rstrip("?.!")})
+    m = re.search(r"\b(?:email|emails|mail)\s+(?:about|from|regarding)\s+(.+)", lower)
+    if m:
+        return ("gmail", {"action": "search", "query": m.group(1).strip().rstrip("?.!")})
+    # "send an email to X about Y" / "email X about Y"
+    m = re.search(r"\b(?:send\s+(?:an?\s+)?email|email)\s+(?:to\s+)?(\S+@\S+)\s+(?:about|subject|saying)\s+(.+)", lower)
+    if m:
+        return ("gmail", {"action": "send", "to": m.group(1), "subject": m.group(2).strip().rstrip("?.!")})
+
+    # === Calendar ===
+    # "what's on my calendar" / "my schedule" / "my agenda" / "what do I have today"
+    if re.search(r"\b(?:what(?:'s|s| is| do i have)\s+on\s+(?:my\s+)?(?:calendar|schedule))\b", lower):
+        return ("calendar", {"action": "today"})
+    if re.search(r"\b(?:my|show|today'?s?)\s+(?:schedule|agenda|calendar)\b", lower):
+        return ("calendar", {"action": "today"})
+    if re.search(r"\bwhat\s+(?:do i|meetings|events)\s+(?:have\s+)?(?:today|this morning|this afternoon)\b", lower):
+        return ("calendar", {"action": "today"})
+    # "what's on tomorrow" / "tomorrow's schedule"
+    if re.search(r"\b(?:tomorrow|tmr)(?:'s)?\s+(?:schedule|agenda|calendar|meetings|events)\b", lower):
+        return ("calendar", {"action": "tomorrow"})
+    if re.search(r"\bwhat\s+(?:do i have|is)\s+(?:on\s+)?tomorrow\b", lower):
+        return ("calendar", {"action": "tomorrow"})
+    # "this week's schedule" / "events this week"
+    if re.search(r"\b(?:this\s+)?week(?:'s)?\s+(?:schedule|agenda|calendar|events|meetings)\b", lower):
+        return ("calendar", {"action": "week"})
+    if re.search(r"\b(?:schedule|events|meetings|agenda)\s+(?:this|for the)\s+week\b", lower):
+        return ("calendar", {"action": "week"})
+    # "create an event" / "schedule a meeting" / "add to calendar: X"
+    m = re.search(r"\b(?:create|schedule|add|set up|book)\s+(?:an?\s+)?(?:event|meeting|appointment|calendar entry)(?:\s*:?\s+(.+))?", lower)
+    if m and m.group(1):
+        return ("calendar", {"action": "create", "title": m.group(1).strip().rstrip("?.!")})
+    elif m:
+        return ("calendar", {"action": "create", "title": ""})
+
+    # === Trips ===
+    # "add trips to calendar" / "create events for my trips" (check BEFORE scan patterns)
+    if re.search(r"\b(?:add|create|put)\s+(?:my\s+)?(?:trip|trips|travel|flight|flights)\s+(?:to|on|in)\s+(?:my\s+)?calendar\b", lower):
+        return ("trips", {"action": "create_events"})
+    if re.search(r"\b(?:create|add)\s+(?:calendar\s+)?(?:event|events|reminder|reminders)\s+(?:for|from)\s+(?:my\s+)?(?:trip|trips|travel|flight|flights)\b", lower):
+        return ("trips", {"action": "create_events"})
+    # "scan my trips" / "upcoming trips" / "any travel plans" / "check my flights"
+    if re.search(r"\b(?:upcoming|my|any|check|scan|show)\s+(?:upcoming\s+)?(?:trip|trips|travel|flight|flights|booking|bookings|vacation|itinerary)\b", lower):
+        return ("trips", {"action": "scan"})
+    if re.search(r"\b(?:travel|trip|flight)\s+(?:plan|plans|info|details|confirmation)\b", lower):
+        return ("trips", {"action": "scan"})
+    if re.search(r"\bwhat\s+(?:trips?|travel|flights?)\s+(?:do i have|are coming|am i)\b", lower):
+        return ("trips", {"action": "scan"})
+
+    # === Stocks ===
+    _STOCK_NAME_MAP = {
+        "apple": "AAPL", "google": "GOOG", "alphabet": "GOOG", "amazon": "AMZN",
+        "microsoft": "MSFT", "tesla": "TSLA", "nvidia": "NVDA", "meta": "META",
+        "facebook": "META", "netflix": "NFLX", "amd": "AMD", "intel": "INTC",
+        "disney": "DIS", "nike": "NKE", "coca cola": "KO", "coca-cola": "KO",
+        "pepsi": "PEP", "walmart": "WMT", "costco": "COST", "starbucks": "SBUX",
+        "uber": "UBER", "airbnb": "ABNB", "spotify": "SPOT", "paypal": "PYPL",
+        "shopify": "SHOP", "boeing": "BA", "jp morgan": "JPM", "jpmorgan": "JPM",
+        "goldman sachs": "GS", "berkshire": "BRK-B", "visa": "V", "mastercard": "MA",
+        "bitcoin": "BTC-USD", "btc": "BTC-USD", "ethereum": "ETH-USD", "eth": "ETH-USD",
+        "solana": "SOL-USD", "sol": "SOL-USD", "dogecoin": "DOGE-USD", "doge": "DOGE-USD",
+        "xrp": "XRP-USD",
+    }
+
+    _STOCK_NOISE = {"stock", "stocks", "share", "shares", "price", "quote",
+                     "ticker", "the", "a", "for", "of", "me", "my", "its", "is"}
+
+    def _resolve_ticker(phrase: str) -> str | None:
+        """Resolve a company name or ticker to a valid yfinance symbol."""
+        # Clean noise words from the phrase
+        raw = phrase.strip().lower().rstrip("?. ")
+        cleaned = " ".join(w for w in raw.split() if w not in _STOCK_NOISE).strip()
+        if not cleaned:
+            return None
+        # Check name map (exact)
+        if cleaned in _STOCK_NAME_MAP:
+            return _STOCK_NAME_MAP[cleaned]
+        # Check multi-word names in the full query
+        for name, tick in _STOCK_NAME_MAP.items():
+            if " " in name and name in lower:
+                return tick
+        # If it looks like an uppercase ticker (1-5 letters), use as-is
+        cu = cleaned.upper()
+        if re.match(r"^[A-Z]{1,5}$", cu):
+            return cu
+        # Try each word individually
+        for w in cleaned.split():
+            if w in _STOCK_NAME_MAP:
+                return _STOCK_NAME_MAP[w]
+            wu = w.upper()
+            if re.match(r"^[A-Z]{1,5}$", wu) and len(wu) >= 2:
+                return wu
+        return None
+
+    is_stock_query = any(kw in lower for kw in [
+        "stock", "price", "ticker", "share", "trading", "worth", "quote",
+        "crypto", "bitcoin", "ethereum", "market", "portfolio", "watchlist",
+    ])
+    # Also count it as a stock query if a known company/crypto name appears
+    is_name_match = any(name in lower for name in _STOCK_NAME_MAP)
+
+    # Market overview: "how is the market", "market overview", "stock market today"
+    if is_stock_query and re.search(r"\b(?:market|indices|index)(?:\s+(?:overview|update|today|doing))?\b", lower):
+        if not re.search(r"\b(?:price|stock)\s+(?:of|for)\b", lower):  # not "stock price of X"
+            return ("stocks", {"action": "market"})
+
+    # Bare ticker: "AAPL" or "AAPL stock" or "TSLA?" or "check AAPL"
+    m = re.match(r"^(?:check\s+|look\s*up\s+)?([A-Z]{1,5})(?:\s+(?:stock|share|price|quote))?\s*\??$", text.strip())
+    if m:
+        return ("stocks", {"action": "quote", "symbol": m.group(1)})
+
+    # Watchlist: "watchlist AAPL TSLA GOOG" or "compare AAPL and TSLA"
+    m = re.search(r"\b(?:watchlist|compare)\s+(.+)", lower)
+    if m:
+        raw = re.sub(r"\b(?:and|vs|with|stock|stocks)\b", ",", m.group(1))
+        syms = []
+        for w in re.split(r"[,\s]+", raw):
+            t = _resolve_ticker(w)
+            if t:
+                syms.append(t)
+        if len(syms) >= 2:
+            return ("stocks", {"action": "watchlist", "symbols": ",".join(syms)})
+
+    # Quote patterns (stock keyword or known company name)
+    if is_stock_query or is_name_match:
+        # Extract the subject — try several natural patterns
+        subject = None
+
+        # "price of X" / "quote for X" / "stock price of X"
+        m = re.search(r"\b(?:price|quote|value)\s+(?:of|for)\s+(.+?)(?:\s+stock|\s+share|\s*\??\s*$)", lower)
+        if m:
+            subject = m.group(1).strip().rstrip("?. ")
+
+        # "how is X doing/trading" / "how's X" / "how much is X" / "hows X"
+        if not subject:
+            m = re.search(r"\bhow(?:'?s|\s+(?:is|are|much\s+is))\s+(.+?)(?:\s+(?:doing|going|trading|stock|share|worth|today))?\s*\??$", lower)
+            if m:
+                candidate = m.group(1).strip()
+                if candidate not in ("the", "my", "the stock", "it"):
+                    subject = candidate
+
+        # "check X" / "look up X"
+        if not subject:
+            m = re.search(r"\b(?:check|look\s*up|get)\s+(.+?)(?:\s+(?:stock|share|price|quote|for me))?\s*\??$", lower)
+            if m:
+                candidate = m.group(1).strip()
+                if candidate not in ("the", "my", "the stock", "stock", "the market", "on"):
+                    subject = candidate
+
+        # "what is X at" / "what's X trading at" / "whats X at"
+        if not subject:
+            m = re.search(r"\bwhat(?:'?s|\s+is)\s+(.+?)(?:\s+(?:at|trading\s+at|worth|price|going for))?\s*\??$", lower)
+            if m:
+                candidate = m.group(1).strip()
+                if candidate not in ("the", "my", "the stock", "the market", "it", "that"):
+                    subject = candidate
+
+        # "X stock price" / "X shares"
+        if not subject:
+            m = re.search(r"^(.+?)\s+(?:stock|share|ticker)\s*(?:price|quote)?\s*\??$", lower)
+            if m:
+                subject = m.group(1).strip()
+
+        if subject:
+            ticker = _resolve_ticker(subject)
+            if ticker:
+                return ("stocks", {"action": "quote", "symbol": ticker})
 
     return None
 

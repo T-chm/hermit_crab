@@ -216,6 +216,130 @@ html, body { height: 100%; }
 .tool-card.tool-summarize .tool-label { color: #b39ddb; }
 .tool-card.tool-messaging { border-left-color: #4dd0e1; }
 .tool-card.tool-messaging .tool-label { color: #4dd0e1; }
+.tool-card.tool-stocks { border-left-color: #4caf50; }
+.tool-card.tool-stocks .tool-label { color: #4caf50; }
+.tool-card.tool-gmail { border-left-color: #ea4335; }
+.tool-card.tool-gmail .tool-label { color: #ea4335; }
+.tool-card.tool-calendar { border-left-color: #4285f4; }
+.tool-card.tool-calendar .tool-label { color: #4285f4; }
+
+/* ---- Stocks ---- */
+.stock-quote { display: flex; flex-direction: column; gap: 10px; }
+.stock-header { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.stock-symbol { font-weight: 700; font-size: 1rem; color: var(--md-on-surface); letter-spacing: 0.5px; }
+.stock-name { font-size: 0.75rem; color: var(--md-on-surface-var); }
+.stock-price-row { display: flex; align-items: baseline; gap: 8px; }
+.stock-price { font-size: 1.5rem; font-weight: 700; color: var(--md-on-surface); letter-spacing: -0.5px; }
+.stock-change { font-size: 0.813rem; font-weight: 600; padding: 2px 8px; border-radius: 6px; }
+.stock-change.up { color: #4caf50; background: rgba(76,175,80,0.12); }
+.stock-change.down { color: #ef5350; background: rgba(239,83,80,0.12); }
+.stock-change.flat { color: var(--md-on-surface-var); background: rgba(168,164,180,0.1); }
+.stock-spark { display: flex; align-items: flex-end; gap: 1px; height: 28px; margin-top: 2px; }
+.stock-spark-bar {
+  flex: 1; min-width: 6px; border-radius: 2px 2px 0 0;
+  transition: height 0.3s;
+}
+.stock-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; }
+.stock-stat { display: flex; justify-content: space-between; font-size: 0.688rem; padding: 2px 0; }
+.stock-stat-label { color: var(--md-on-surface-var); }
+.stock-stat-value { color: var(--md-on-surface); font-weight: 500; }
+.stock-range { margin-top: 4px; }
+.stock-range-label { font-size: 0.625rem; color: var(--md-on-surface-var); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+.stock-range-bar { height: 4px; background: var(--md-surface-ctr-highest); border-radius: 2px; position: relative; overflow: visible; }
+.stock-range-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, #ef5350, #ffeb3b, #4caf50); }
+.stock-range-marker {
+  position: absolute; top: -3px; width: 10px; height: 10px;
+  background: var(--md-on-surface); border: 2px solid var(--md-surface-ctr);
+  border-radius: 50%; transform: translateX(-50%);
+}
+.stock-range-ends { display: flex; justify-content: space-between; font-size: 0.625rem; color: var(--md-on-surface-var); margin-top: 2px; }
+.stock-sector { font-size: 0.625rem; color: var(--md-on-surface-var); padding: 2px 8px; background: var(--md-surface-ctr-high); border-radius: 8px; display: inline-block; }
+
+/* Watchlist / Market */
+.stock-list { display: flex; flex-direction: column; gap: 6px; }
+.stock-list-item {
+  display: flex; align-items: center; gap: 10px; padding: 6px 10px;
+  background: var(--md-surface-ctr-high); border-radius: 8px;
+  border: 1px solid var(--md-outline-var);
+}
+.stock-list-sym { font-weight: 700; font-size: 0.813rem; min-width: 55px; color: var(--md-on-surface); }
+.stock-list-name { flex: 1; font-size: 0.688rem; color: var(--md-on-surface-var); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stock-list-price { font-size: 0.813rem; font-weight: 600; color: var(--md-on-surface); text-align: right; min-width: 60px; }
+.stock-list-change { font-size: 0.688rem; font-weight: 600; text-align: right; min-width: 65px; }
+
+/* ---- Gmail ---- */
+.email-list { display: flex; flex-direction: column; gap: 6px; }
+.email-item {
+  padding: 8px 10px; background: var(--md-surface-ctr-high); border-radius: 8px;
+  border: 1px solid var(--md-outline-var); cursor: default;
+}
+.email-item-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.email-from { font-weight: 600; font-size: 0.75rem; color: var(--md-on-surface); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.email-date { font-size: 0.625rem; color: var(--md-on-surface-var); white-space: nowrap; }
+.email-subject { font-size: 0.813rem; color: var(--md-on-surface); font-weight: 500; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.email-snippet { font-size: 0.688rem; color: var(--md-on-surface-var); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.email-unread-badge { font-size: 0.563rem; font-weight: 700; background: #ea4335; color: white; padding: 1px 6px; border-radius: 8px; }
+.email-body { font-size: 0.75rem; color: var(--md-on-surface); line-height: 1.55; white-space: pre-wrap; word-wrap: break-word; max-height: 200px; overflow-y: auto; }
+.email-sent-confirm { display: flex; flex-direction: column; gap: 4px; }
+.email-sent-to { font-size: 0.688rem; color: var(--md-on-surface-var); }
+.email-sent-subject { font-size: 0.875rem; font-weight: 500; color: var(--md-on-surface); }
+.email-sent-status { font-size: 0.688rem; color: #4caf50; font-weight: 600; }
+
+/* ---- Calendar ---- */
+.cal-events { display: flex; flex-direction: column; gap: 6px; }
+.cal-date-label { font-size: 0.625rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: #4285f4; padding: 4px 0 2px; }
+.cal-event {
+  display: flex; gap: 10px; padding: 8px 10px; background: var(--md-surface-ctr-high);
+  border-radius: 8px; border: 1px solid var(--md-outline-var); border-left: 3px solid #4285f4;
+}
+.cal-time { display: flex; flex-direction: column; align-items: center; min-width: 50px; flex-shrink: 0; }
+.cal-time-start { font-size: 0.75rem; font-weight: 600; color: var(--md-on-surface); }
+.cal-time-end { font-size: 0.625rem; color: var(--md-on-surface-var); }
+.cal-time-allday { font-size: 0.625rem; font-weight: 600; color: #4285f4; text-transform: uppercase; }
+.cal-details { flex: 1; min-width: 0; }
+.cal-title { font-size: 0.813rem; font-weight: 600; color: var(--md-on-surface); margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-location { font-size: 0.625rem; color: var(--md-on-surface-var); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-attendees { font-size: 0.625rem; color: var(--md-on-surface-var); margin-top: 2px; }
+.cal-hangout { font-size: 0.625rem; color: #4285f4; text-decoration: none; }
+.cal-hangout:hover { text-decoration: underline; }
+.cal-empty { font-size: 0.75rem; color: var(--md-on-surface-var); font-style: italic; padding: 8px 0; }
+.cal-created { display: flex; flex-direction: column; gap: 4px; }
+.cal-created-title { font-size: 0.875rem; font-weight: 600; color: var(--md-on-surface); }
+.cal-created-time { font-size: 0.75rem; color: var(--md-on-surface-var); }
+.cal-created-status { font-size: 0.688rem; color: #4caf50; font-weight: 600; }
+
+/* ---- Trips ---- */
+.trip-list { display: flex; flex-direction: column; gap: 6px; }
+.trip-item {
+  display: flex; gap: 10px; padding: 8px 10px; background: var(--md-surface-ctr-high);
+  border-radius: 8px; border: 1px solid var(--md-outline-var); border-left: 3px solid #26c6da;
+}
+.trip-next { background: rgba(38,198,218,0.06); border-color: rgba(38,198,218,0.3); }
+.trip-type-badge {
+  font-size: 0.563rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;
+  padding: 1px 6px; border-radius: 6px; white-space: nowrap; line-height: 1.6;
+}
+.trip-type-flight { background: rgba(38,198,218,0.15); color: #26c6da; }
+.trip-type-hotel { background: rgba(255,183,77,0.15); color: #ffb74d; }
+.trip-type-airbnb { background: rgba(255,87,95,0.15); color: #ff575f; }
+.trip-type-car_rental { background: rgba(129,199,132,0.15); color: #81c784; }
+.trip-type-train { background: rgba(179,157,219,0.15); color: #b39ddb; }
+.trip-type-travel { background: rgba(38,198,218,0.15); color: #26c6da; }
+.trip-type-event { background: rgba(244,143,177,0.15); color: #f48fb1; }
+.trip-icon { font-size: 1.1rem; line-height: 1; flex-shrink: 0; padding-top: 2px; }
+.trip-details { flex: 1; min-width: 0; }
+.trip-subject { font-size: 0.75rem; font-weight: 600; color: var(--md-on-surface); margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trip-dates { font-size: 0.625rem; color: var(--md-on-surface-var); margin-bottom: 2px; }
+.trip-locations { font-size: 0.625rem; color: #26c6da; font-weight: 500; }
+.trip-cal-status { font-size: 0.563rem; font-weight: 600; margin-top: 3px; }
+.trip-cal-yes { color: #4caf50; }
+.trip-cal-no { color: #ff9800; }
+.trip-summary { display: flex; gap: 12px; margin-bottom: 8px; font-size: 0.688rem; color: var(--md-on-surface-var); }
+.trip-summary-stat { display: flex; align-items: center; gap: 4px; }
+.trip-summary-num { font-weight: 700; color: var(--md-on-surface); }
+.trip-created-list { display: flex; flex-direction: column; gap: 4px; }
+.trip-created-item { font-size: 0.75rem; color: var(--md-on-surface); padding: 6px 8px; background: var(--md-surface-ctr-high); border-radius: 6px; border-left: 3px solid #4caf50; }
+.trip-created-status { font-size: 0.688rem; color: #4caf50; font-weight: 600; }
 
 /* ---- Music ---- */
 .music-info { display: flex; flex-direction: column; gap: 2px; }
@@ -569,6 +693,9 @@ html, body { height: 100%; }
       <button class="qa-btn flex items-center gap-1.5 bg-md-surface-ctr-high text-md-on-surface-var px-3 py-1.5 rounded-full text-xs whitespace-nowrap shrink-0 border border-md-outline-var cursor-pointer transition-all duration-200 hover:bg-md-primary hover:text-md-on-primary hover:border-md-primary hover:shadow-md-1 active:scale-[0.97] font-medium" data-cmd="show my recent messages" title="Recent messages">
         <span class="text-sm leading-none">&#128172;</span><span>Messages</span>
       </button>
+      <button class="qa-btn flex items-center gap-1.5 bg-md-surface-ctr-high text-md-on-surface-var px-3 py-1.5 rounded-full text-xs whitespace-nowrap shrink-0 border border-md-outline-var cursor-pointer transition-all duration-200 hover:bg-md-primary hover:text-md-on-primary hover:border-md-primary hover:shadow-md-1 active:scale-[0.97] font-medium" data-cmd="scan my upcoming trips" title="Scan trips from email">
+        <span class="text-sm leading-none">&#9992;&#65039;</span><span>Trips</span>
+      </button>
     </div>
 
     <!-- Input row -->
@@ -675,6 +802,10 @@ const TOOL_META = {
   notes:         { icon: '\uD83D\uDCDD', label: 'Notes',       accent: '#ce93d8' },
   summarize:     { icon: '\uD83D\uDCC4', label: 'Summary',     accent: '#b39ddb' },
   messaging:     { icon: '\uD83D\uDCAC', label: 'Messages',    accent: '#4dd0e1' },
+  stocks:        { icon: '\uD83D\uDCC8', label: 'Stocks',      accent: '#4caf50' },
+  gmail:         { icon: '\u2709\uFE0F', label: 'Gmail',       accent: '#ea4335' },
+  calendar:      { icon: '\uD83D\uDCC5', label: 'Calendar',    accent: '#4285f4' },
+  trips:         { icon: '\u2708\uFE0F', label: 'Trips',       accent: '#26c6da' },
 };
 
 // ---------------------------------------------------------------------------
@@ -1086,6 +1217,19 @@ function getToolDetail(name, args) {
     case 'messaging':
       if (args.action === 'send') return '\u2192 ' + (args.to || '');
       return formatAction(args.action);
+    case 'stocks':
+      if (args.action === 'quote') return (args.symbol || '').toUpperCase();
+      if (args.action === 'market') return 'Market Overview';
+      if (args.action === 'watchlist') return 'Watchlist';
+      return formatAction(args.action);
+    case 'gmail':
+      if (args.action === 'send') return '\u2192 ' + (args.to || '');
+      if (args.action === 'search') return args.query || '';
+      return formatAction(args.action);
+    case 'calendar':
+      if (args.action === 'create') return args.title || 'New Event';
+      if (args.action === 'search') return args.query || '';
+      return formatAction(args.action);
     default: return '';
   }
 }
@@ -1149,6 +1293,10 @@ function renderToolBody(name, args, result) {
     case 'notes':         return renderNotesBody(args, result);
     case 'summarize':     return renderSummarizeBody(args, result);
     case 'messaging':     return renderMessagingBody(args, result);
+    case 'stocks':        return renderStocksBody(args, result);
+    case 'gmail':         return renderGmailBody(args, result);
+    case 'calendar':      return renderCalendarBody(args, result);
+    case 'trips':         return renderTripsBody(args, result);
     default:              return '<div class="tool-result-text">' + escapeHtml(result) + '</div>';
   }
 }
@@ -1316,6 +1464,312 @@ function renderMessagingBody(args, result) {
   return '<pre class="tool-result-text">' + escapeHtml(result) + '</pre>';
 }
 
+function renderStocksBody(args, result) {
+  let data;
+  try { data = JSON.parse(result); } catch(e) {
+    return '<pre class="tool-result-text">' + escapeHtml(result) + '</pre>';
+  }
+  if (data.error) return '<div class="tool-result-text" style="color:var(--md-error)">' + escapeHtml(data.error) + '</div>';
+
+  const act = data.action;
+
+  // Single quote
+  if (act === 'quote') {
+    const d = data.data;
+    if (d.error) return '<div class="tool-result-text" style="color:var(--md-error)">' + escapeHtml(d.error) + '</div>';
+    const up = d.change > 0; const dn = d.change < 0;
+    const cls = up ? 'up' : dn ? 'down' : 'flat';
+    const arrow = up ? '\u25B2' : dn ? '\u25BC' : '';
+    const sign = up ? '+' : '';
+    let html = '<div class="stock-quote">';
+    // Header
+    html += '<div class="stock-header">';
+    html += '<span class="stock-symbol">' + escapeHtml(d.symbol) + '</span>';
+    html += '<span class="stock-name">' + escapeHtml(d.name) + '</span>';
+    if (d.sector) html += '<span class="stock-sector">' + escapeHtml(d.sector) + '</span>';
+    html += '</div>';
+    // Price + change
+    html += '<div class="stock-price-row">';
+    html += '<span class="stock-price">$' + (d.price != null ? d.price.toFixed(2) : 'N/A') + '</span>';
+    if (d.change != null) {
+      html += '<span class="stock-change ' + cls + '">' + arrow + ' ' + sign + d.change.toFixed(2) + ' (' + sign + d.change_pct.toFixed(2) + '%)</span>';
+    }
+    html += '</div>';
+    // Sparkline
+    if (d.spark && d.spark.length > 1) {
+      const mn = Math.min(...d.spark); const mx = Math.max(...d.spark);
+      const range = mx - mn || 1;
+      html += '<div class="stock-spark">';
+      d.spark.forEach(function(v, i) {
+        const pct = ((v - mn) / range * 70) + 30;
+        const clr = i === d.spark.length - 1 ? (d.change >= 0 ? '#4caf50' : '#ef5350') : 'rgba(160,100,240,0.3)';
+        html += '<div class="stock-spark-bar" style="height:' + pct + '%;background:' + clr + '"></div>';
+      });
+      html += '</div>';
+    }
+    // 52-week range bar
+    if (d.week52_low != null && d.week52_high != null && d.price != null) {
+      const rng = d.week52_high - d.week52_low || 1;
+      const pct = Math.min(100, Math.max(0, ((d.price - d.week52_low) / rng) * 100));
+      html += '<div class="stock-range">';
+      html += '<div class="stock-range-label">52-Week Range</div>';
+      html += '<div class="stock-range-bar"><div class="stock-range-fill" style="width:100%"></div>';
+      html += '<div class="stock-range-marker" style="left:' + pct.toFixed(1) + '%"></div></div>';
+      html += '<div class="stock-range-ends"><span>$' + d.week52_low.toFixed(2) + '</span><span>$' + d.week52_high.toFixed(2) + '</span></div>';
+      html += '</div>';
+    }
+    // Stats grid
+    html += '<div class="stock-stats">';
+    if (d.open != null) html += '<div class="stock-stat"><span class="stock-stat-label">Open</span><span class="stock-stat-value">$' + d.open.toFixed(2) + '</span></div>';
+    if (d.prev_close != null) html += '<div class="stock-stat"><span class="stock-stat-label">Prev Close</span><span class="stock-stat-value">$' + d.prev_close.toFixed(2) + '</span></div>';
+    if (d.day_high != null && d.day_low != null) html += '<div class="stock-stat"><span class="stock-stat-label">Day Range</span><span class="stock-stat-value">$' + d.day_low.toFixed(2) + ' - $' + d.day_high.toFixed(2) + '</span></div>';
+    if (d.market_cap && d.market_cap !== 'N/A') html += '<div class="stock-stat"><span class="stock-stat-label">Market Cap</span><span class="stock-stat-value">' + escapeHtml(d.market_cap) + '</span></div>';
+    if (d.pe_ratio != null) html += '<div class="stock-stat"><span class="stock-stat-label">P/E Ratio</span><span class="stock-stat-value">' + d.pe_ratio.toFixed(2) + '</span></div>';
+    if (d.volume && d.volume !== 'N/A') html += '<div class="stock-stat"><span class="stock-stat-label">Volume</span><span class="stock-stat-value">' + escapeHtml(d.volume) + '</span></div>';
+    html += '</div>';
+    html += '</div>';
+    return html;
+  }
+
+  // Watchlist or Market
+  if (act === 'watchlist' || act === 'market') {
+    const items = data.data;
+    if (!items || !items.length) return '<div class="tool-result-text">No data available.</div>';
+    let html = '<div class="stock-list">';
+    items.forEach(function(d) {
+      if (d.error) {
+        html += '<div class="stock-list-item"><span class="stock-list-sym">' + escapeHtml(d.symbol) + '</span><span class="stock-list-name" style="color:var(--md-error)">Error</span></div>';
+        return;
+      }
+      const up = d.change > 0; const dn = d.change < 0;
+      const cls = up ? 'up' : dn ? 'down' : 'flat';
+      const sign = up ? '+' : '';
+      html += '<div class="stock-list-item">';
+      html += '<span class="stock-list-sym">' + escapeHtml(d.symbol.replace('^', '')) + '</span>';
+      html += '<span class="stock-list-name">' + escapeHtml(d.name) + '</span>';
+      html += '<span class="stock-list-price">$' + (d.price != null ? d.price.toFixed(2) : 'N/A') + '</span>';
+      if (d.change_pct != null) {
+        html += '<span class="stock-list-change ' + cls + '">' + sign + d.change_pct.toFixed(2) + '%</span>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  return '<pre class="tool-result-text">' + escapeHtml(result) + '</pre>';
+}
+
+function renderGmailBody(args, result) {
+  let data;
+  try { data = JSON.parse(result); } catch(e) {
+    return '<pre class="tool-result-text">' + escapeHtml(result) + '</pre>';
+  }
+  if (data.error) return '<div class="tool-result-text" style="color:var(--md-error)">' + escapeHtml(data.error) + '</div>';
+
+  // Send confirmation
+  if (data.action === 'send' && data.status === 'sent') {
+    return '<div class="email-sent-confirm">' +
+      '<div class="email-sent-to">To: ' + escapeHtml(data.to || '') + '</div>' +
+      '<div class="email-sent-subject">' + escapeHtml(data.subject || '(no subject)') + '</div>' +
+      '<div class="email-sent-status">\u2713 Sent</div>' +
+    '</div>';
+  }
+
+  // Read single email
+  if (data.action === 'read' && data.email) {
+    const e = data.email;
+    return '<div>' +
+      '<div class="email-item-header"><span class="email-from">' + escapeHtml(e.from) + '</span>' +
+      '<span class="email-date">' + escapeHtml(e.date || '') + '</span></div>' +
+      '<div class="email-subject">' + escapeHtml(e.subject) + '</div>' +
+      '<div class="email-body">' + escapeHtml(e.body || e.snippet || '') + '</div>' +
+    '</div>';
+  }
+
+  // Email list (unread, search)
+  const emails = data.emails || [];
+  const total = data.total || emails.length;
+  if (!emails.length) return '<div class="cal-empty">No emails found.</div>';
+
+  let html = '';
+  if (data.action === 'unread' && total > 0) {
+    html += '<div style="margin-bottom:6px;font-size:0.688rem;color:var(--md-on-surface-var)">' + total + ' unread</div>';
+  }
+  html += '<div class="email-list">';
+  emails.forEach(function(e) {
+    html += '<div class="email-item">';
+    html += '<div class="email-item-header">';
+    html += '<span class="email-from">' + escapeHtml(e.from || '') + '</span>';
+    if (e.date) html += '<span class="email-date">' + escapeHtml(e.date) + '</span>';
+    html += '</div>';
+    html += '<div class="email-subject">' + escapeHtml(e.subject || '(no subject)') + '</div>';
+    html += '<div class="email-snippet">' + escapeHtml(e.snippet || '') + '</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function renderCalendarBody(args, result) {
+  let data;
+  try { data = JSON.parse(result); } catch(e) {
+    return '<pre class="tool-result-text">' + escapeHtml(result) + '</pre>';
+  }
+  if (data.error) return '<div class="tool-result-text" style="color:var(--md-error)">' + escapeHtml(data.error) + '</div>';
+
+  // Create confirmation
+  if (data.action === 'create') {
+    if (data.status === 'created') {
+      return '<div class="cal-created">' +
+        '<div class="cal-created-title">' + escapeHtml(data.title || 'New Event') + '</div>' +
+        (data.start ? '<div class="cal-created-time">' + escapeHtml(data.start) + (data.end ? ' \u2013 ' + escapeHtml(data.end) : '') + '</div>' : '') +
+        (data.attendees ? '<div class="cal-attendees">' + escapeHtml(data.attendees) + '</div>' : '') +
+        '<div class="cal-created-status">\u2713 Created</div>' +
+      '</div>';
+    }
+    return '<div class="tool-result-text" style="color:var(--md-error)">' + escapeHtml(data.error || 'Failed to create event.') + '</div>';
+  }
+
+  // Event list (agenda, today, tomorrow, week, search)
+  const events = data.events || [];
+  if (!events.length) {
+    const label = data.action === 'today' ? 'today' : data.action === 'tomorrow' ? 'tomorrow' : 'this period';
+    return '<div class="cal-empty">No events ' + label + '.</div>';
+  }
+
+  let html = '<div class="cal-events">';
+  let lastDate = '';
+  events.forEach(function(ev) {
+    // Group by date
+    if (ev.date && ev.date !== lastDate) {
+      lastDate = ev.date;
+      html += '<div class="cal-date-label">' + escapeHtml(ev.date) + '</div>';
+    }
+    html += '<div class="cal-event">';
+    // Time column
+    html += '<div class="cal-time">';
+    if (ev.all_day) {
+      html += '<span class="cal-time-allday">All day</span>';
+    } else {
+      html += '<span class="cal-time-start">' + escapeHtml(ev.start_time || '') + '</span>';
+      html += '<span class="cal-time-end">' + escapeHtml(ev.end_time || '') + '</span>';
+    }
+    html += '</div>';
+    // Details column
+    html += '<div class="cal-details">';
+    html += '<div class="cal-title">' + escapeHtml(ev.title) + '</div>';
+    if (ev.location) html += '<div class="cal-location">\uD83D\uDCCD ' + escapeHtml(ev.location) + '</div>';
+    if (ev.hangout) html += '<a class="cal-hangout" href="' + escapeHtml(ev.hangout) + '" target="_blank">\uD83C\uDF10 Join meeting</a>';
+    if (ev.attendees && ev.attendees.length > 0) {
+      const names = ev.attendees.map(function(a) { return a.name || a.email; }).join(', ');
+      html += '<div class="cal-attendees">\uD83D\uDC65 ' + escapeHtml(names) + '</div>';
+    }
+    html += '</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function renderTripsBody(args, result) {
+  let data;
+  try { data = JSON.parse(result); } catch(e) {
+    return '<pre class="tool-result-text">' + escapeHtml(result) + '</pre>';
+  }
+  if (data.error) return '<div class="tool-result-text" style="color:var(--md-error)">' + escapeHtml(data.error) + '</div>';
+
+  const typeIcons = { flight: '\u2708\uFE0F', hotel: '\uD83C\uDFE8', airbnb: '\uD83C\uDFE0', car_rental: '\uD83D\uDE97', train: '\uD83D\uDE82', event: '\uD83C\uDFAB', travel: '\u2708\uFE0F' };
+  const typeLabels = { flight: 'Flight', hotel: 'Hotel', airbnb: 'Airbnb', car_rental: 'Car Rental', train: 'Train', event: 'Event', travel: 'Trip' };
+
+  function daysUntil(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    const now = new Date(); now.setHours(0,0,0,0);
+    return Math.ceil((d - now) / 86400000);
+  }
+  function fmtDate(dateStr) {
+    try {
+      const d = new Date(dateStr + 'T00:00:00');
+      return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    } catch(e) { return dateStr; }
+  }
+  function urgencyLabel(days) {
+    if (days <= 0) return '<span style="color:#ff5252;font-weight:700">Today!</span>';
+    if (days === 1) return '<span style="color:#ff9800;font-weight:600">Tomorrow</span>';
+    if (days <= 7) return '<span style="color:#ffb74d;font-weight:600">In ' + days + ' days</span>';
+    return '<span style="color:var(--md-on-surface-var)">In ' + days + ' days</span>';
+  }
+
+  // Create events confirmation
+  if (data.action === 'create_events') {
+    const created = data.created || [];
+    if (!created.length) return '<div class="cal-empty">All trips are already on your calendar.</div>';
+    let html = '<div class="trip-created-status">\u2713 Added ' + created.length + ' event' + (created.length > 1 ? 's' : '') + ' to calendar</div>';
+    html += '<div class="trip-created-list">';
+    created.forEach(function(ev) {
+      if (ev.error) {
+        html += '<div class="trip-created-item" style="border-left-color:var(--md-error)">\u274C ' + escapeHtml(ev.title || 'Event') + ': ' + escapeHtml(ev.error) + '</div>';
+      } else {
+        html += '<div class="trip-created-item">' + escapeHtml(ev.title || 'Event');
+        if (ev.start) html += ' \u2014 ' + fmtDate(ev.start) + (ev.end && ev.end !== ev.start ? ' to ' + fmtDate(ev.end) : '');
+        html += '</div>';
+      }
+    });
+    html += '</div>';
+    return html;
+  }
+
+  // Scan results
+  const trips = data.trips || [];
+  if (!trips.length) return '<div class="cal-empty">No upcoming trips found in recent emails.</div>';
+
+  const missing = data.missing_from_calendar || 0;
+
+  let html = '';
+  // Summary bar
+  html += '<div class="trip-summary">';
+  html += '<div class="trip-summary-stat"><span class="trip-summary-num">' + trips.length + '</span> upcoming</div>';
+  if (missing > 0) {
+    html += '<div class="trip-summary-stat" style="color:#ff9800">\u26A0\uFE0F <span class="trip-summary-num">' + missing + '</span> not on calendar</div>';
+  } else {
+    html += '<div class="trip-summary-stat" style="color:#4caf50">\u2705 All on calendar</div>';
+  }
+  html += '</div>';
+
+  html += '<div class="trip-list">';
+  trips.forEach(function(t, i) {
+    const icon = typeIcons[t.type] || '\u2708\uFE0F';
+    const label = typeLabels[t.type] || 'Trip';
+    const firstDate = (t.dates && t.dates.length) ? t.dates[0] : null;
+    const days = firstDate ? daysUntil(firstDate) : null;
+    const isNext = i === 0; // first trip = soonest
+
+    html += '<div class="trip-item' + (isNext ? ' trip-next' : '') + '">';
+    html += '<div class="trip-icon">' + icon + '</div>';
+    html += '<div class="trip-details">';
+    // Location-based title if available, otherwise clean subject
+    if (t.locations && t.locations.length) {
+      html += '<div class="trip-subject">' + escapeHtml(label) + ' \u2192 ' + t.locations.map(function(l) { return escapeHtml(l); }).join(', ') + '</div>';
+    } else {
+      html += '<div class="trip-subject">' + escapeHtml(t.subject || label) + '</div>';
+    }
+    // Date + countdown
+    if (firstDate) {
+      const dateRange = t.dates.length > 1 ? fmtDate(t.dates[0]) + ' \u2013 ' + fmtDate(t.dates[t.dates.length-1]) : fmtDate(t.dates[0]);
+      html += '<div class="trip-dates">' + dateRange + (days !== null ? ' \u00B7 ' + urgencyLabel(days) : '') + '</div>';
+    }
+    // Calendar status
+    if (t.has_calendar_event) {
+      html += '<div class="trip-cal-status trip-cal-yes">\u2713 On calendar</div>';
+    } else {
+      html += '<div class="trip-cal-status trip-cal-no">\u26A0 Not on calendar</div>';
+    }
+    html += '</div></div>';
+  });
+  html += '</div>';
+  return html;
+}
+
 // ---------------------------------------------------------------------------
 // Tool action buttons
 // ---------------------------------------------------------------------------
@@ -1347,6 +1801,38 @@ function renderToolActions(name, args) {
         return '<button onclick="quickAction(\'list my notes\')">All Notes</button>';
       }
       return null;
+
+    case 'stocks':
+      if (args.action === 'quote' && args.symbol) {
+        return '<button onclick="quickAction(\'market overview\')">Market</button>' +
+          '<button onclick="quickAction(\'watchlist AAPL,TSLA,GOOG,MSFT\')">Watchlist</button>';
+      }
+      if (args.action === 'market' || args.action === 'watchlist') {
+        return '<button onclick="quickAction(\'market overview\')">Market</button>';
+      }
+      return null;
+
+    case 'gmail':
+      if (args.action !== 'send') {
+        return '<button onclick="quickAction(\'check my unread emails\')">Unread</button>' +
+          '<button onclick="quickAction(\'search emails from today\')">Today</button>';
+      }
+      return null;
+
+    case 'calendar':
+      if (args.action !== 'create') {
+        return '<button onclick="quickAction(\'today\\\'s schedule\')">Today</button>' +
+          '<button onclick="quickAction(\'tomorrow\\\'s schedule\')">Tomorrow</button>' +
+          '<button onclick="quickAction(\'this week\\\'s events\')">Week</button>';
+      }
+      return null;
+
+    case 'trips':
+      if (args.action === 'scan') {
+        return '<button onclick="quickAction(\'add my trips to calendar\')">Add to Calendar</button>' +
+          '<button onclick="quickAction(\'scan my upcoming trips\')">Rescan</button>';
+      }
+      return '<button onclick="quickAction(\'scan my upcoming trips\')">Scan Trips</button>';
 
     default:
       return null;
