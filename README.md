@@ -14,13 +14,13 @@ For Gmail, Calendar, and Trips you'll need Google OAuth — see [SETUP.md](SETUP
 
 ## Why Hermit Crab?
 
-**Fully local.** LLM runs via Ollama, speech-to-text via Whisper — no cloud APIs, no API keys, no accounts. Everything stays on your hardware.
+**Your conversations shouldn't live on someone else's server.** Cloud assistants route every query through remote APIs — your voice, your questions, your habits, all logged and stored on infrastructure you don't control. Hermit Crab runs the LLM (Ollama) and speech recognition (Whisper) entirely on your machine. No cloud APIs, no API keys, no accounts. Nothing leaves unless a tool explicitly needs to reach out.
 
-**Extensible tools.** Drop a Python file in `tools/` and restart. Auto-discovered, no config. Hermit Crab ships with 12 tools out of the box — music, email, calendar, stocks, smart home, and more.
+**AI assistants shouldn't be black boxes.** Most assistants make network calls you can't see, collect telemetry you can't disable, and change behavior through silent updates. Hermit Crab is a single-file backend and a single-file frontend. The LLM and speech processing are fully offline. Tools that do reach out (weather, stocks, Gmail) use standard APIs you can read and audit — no hidden calls, no telemetry, no surprises.
 
-**Transparent networking.** You control what goes over the network. The LLM and speech processing are fully offline. Tools that reach out (weather, stocks, Gmail) do so with standard APIs you can inspect — no telemetry, no hidden calls.
+**You shouldn't need permission to extend your own assistant.** Alexa has Skills certification. Siri has no plugin story. Most local LLM UIs have no tool system at all. In Hermit Crab, you drop a Python file in `tools/` and restart — auto-discovered, no config, no approval process. It ships with 12 tools out of the box and you can add more in minutes.
 
-**Adaptive thinking.** A fast classifier sizes up each query and allocates a thinking budget accordingly — quick answers for simple requests, deep reasoning only when it's needed.
+**Local LLMs shouldn't waste time thinking about simple questions.** Most setups either always run in "thinking mode" (slow for everything) or never do (misses nuance). Hermit Crab uses a fast classifier to size up each query and dynamically allocate a thinking budget — instant answers for "play some jazz", deep reasoning for "debug this function".
 
 ## Tools
 
