@@ -200,10 +200,16 @@ def convert_and_transcribe(audio_bytes: bytes) -> str:
 
 
 CLASSIFY_PROMPT = (
-    "Does the following user message require complex reasoning, multi-step analysis, "
-    "math, coding, debugging, detailed explanation, or comparison? "
-    "Reply with ONLY the single word YES or NO, nothing else."
+    "Rate the thinking complexity needed for the following user message.\n"
+    "Reply with ONLY one word:\n"
+    "  NONE — greetings, tool requests, simple facts, commands\n"
+    "  LIGHT — explanations, comparisons, opinions, light reasoning\n"
+    "  DEEP — multi-step math, coding, debugging, detailed analysis\n"
+    "One word only."
 )
+
+# Thinking budget per complexity tier (num_predict = thinking + response tokens)
+_THINK_BUDGET = {"NONE": 0, "LIGHT": 2048, "DEEP": 8192}
 
 
 # Per-tool keyword routing — only send matching tool definitions to save TTFT
@@ -252,6 +258,12 @@ _TOOL_KEYWORD_MAP = {
         "vacation", "booking", "itinerary", "airbnb", "boarding pass",
         "car rental", "train ticket", "upcoming trip", "travel plan",
     ],
+    "daily_brief": [
+        "daily brief", "morning brief", "daily briefing", "morning briefing",
+        "daily summary", "morning summary", "daily update", "morning update",
+        "good morning", "status update", "brief me", "catch me up",
+        "what did i miss", "what's new", "whats new", "daily digest",
+    ],
 }
 
 # Build lookup: tool_name -> TOOLS entry
@@ -269,6 +281,10 @@ def _select_tools(text: str) -> list:
             if defn:
                 matched.append(defn)
     return matched
+
+
+# Tools with rich UI cards — skip the follow-up LLM text response
+_RICH_UI_TOOLS = {"daily_brief", "stocks", "gmail", "calendar", "trips"}
 
 
 # ---------------------------------------------------------------------------
@@ -341,6 +357,20 @@ def _try_direct_dispatch(text: str, memory: "MemoryManager | None" = None) -> tu
             memory._save_core()
         # Return a special sentinel — caller will handle as a status message
         return ("_set_preference", {"key": "music_app", "value": app})
+
+    # === Daily Brief (checked FIRST — "good morning" should trigger brief, not conversation) ===
+    if re.search(r"\b(?:daily|morning)\s+(?:brief|briefing|summary|update|digest)\b", lower):
+        return ("daily_brief", {})
+    if re.search(r"\bbrief\s+me\b", lower):
+        return ("daily_brief", {})
+    if re.search(r"\bcatch\s+me\s+up\b", lower):
+        return ("daily_brief", {})
+    if re.search(r"\b(?:what(?:'s|s)?\s+new|whats\s+new)\b", lower):
+        return ("daily_brief", {})
+    if re.search(r"\b(?:status|daily)\s+(?:update|report)\b", lower):
+        return ("daily_brief", {})
+    if re.search(r"\bgood\s+morning\b", lower) and len(lower.split()) <= 4:
+        return ("daily_brief", {})
 
     # === Music control (checked BEFORE weather to avoid "sunny weather" → weather) ===
     def _music_app() -> dict:
@@ -686,8 +716,9 @@ def _try_direct_dispatch(text: str, memory: "MemoryManager | None" = None) -> tu
     return None
 
 
-async def classify_needs_thinking(user_text: str, model: str) -> bool:
-    """Quick non-thinking LLM call to decide if the query needs deep reasoning."""
+async def classify_thinking_budget(user_text: str, model: str) -> int:
+    """Quick non-thinking LLM call to decide how much thinking budget the query needs.
+    Returns num_predict cap (0 = no thinking)."""
     try:
         resp = await _ollama_client.post(
             "/api/chat",
@@ -706,18 +737,27 @@ async def classify_needs_thinking(user_text: str, model: str) -> bool:
         )
         resp.raise_for_status()
         answer = resp.json().get("message", {}).get("content", "").strip().upper()
-        return answer.startswith("YES")
+        for tier in ("DEEP", "LIGHT", "NONE"):
+            if tier in answer:
+                return _THINK_BUDGET[tier]
+        # Backward compat: YES → LIGHT, NO → NONE
+        if answer.startswith("YES"):
+            return _THINK_BUDGET["LIGHT"]
+        return 0
     except Exception:
-        return False  # default to fast mode on error
+        return 0  # default to no thinking on error
 
 
 async def _stream_response(ws: WebSocket, client: httpx.AsyncClient,
-                           messages: list, model: str, think: bool) -> str:
+                           messages: list, model: str, think_budget: int = 0) -> str:
     """Stream a single Ollama call, forwarding tokens to the WebSocket.
+    think_budget: 0 = no thinking, >0 = thinking enabled with num_predict cap.
     Returns the full accumulated response text."""
     payload = {"model": model, "messages": messages, "stream": True, "keep_alive": "10m"}
-    if not think:
+    if think_budget <= 0:
         payload["think"] = False
+    else:
+        payload["options"] = {"num_predict": think_budget}
 
     async with client.stream(
         "POST", "/api/chat", json=payload
@@ -761,7 +801,7 @@ async def _stream_response(ws: WebSocket, client: httpx.AsyncClient,
 
 
 async def stream_ollama(ws: WebSocket, history: list, model: str,
-                        think: bool = False, memory: "MemoryManager | None" = None):
+                        think_budget: int = 0, memory: "MemoryManager | None" = None):
     """Single streaming call with tools. Only includes tool definitions when
     the user message likely needs them (saves ~5s TTFT on conversational turns)."""
     # Only send tool definitions that match the user's message (saves ~5s TTFT)
@@ -812,11 +852,22 @@ async def stream_ollama(ws: WebSocket, history: list, model: str,
                 "type": "tool_result", "name": tool_name,
                 "args": tool_args, "result": tool_result,
             })
-            # Single LLM call to format the response (lean prompt, no tools)
+            if tool_name in _RICH_UI_TOOLS:
+                # Rich UI card speaks for itself — no follow-up text needed
+                full = ""
+                history.append({"role": "assistant", "content": full})
+                t_total = time.monotonic() - t0
+                await ws.send_json({
+                    "type": "llm_done", "text": full,
+                    "timing": {"first_token_ms": round(t_total * 1000), "total_ms": round(t_total * 1000)},
+                })
+                print(f"[perf] direct_dispatch(rich_ui): {tool_name} total={t_total:.2f}s", flush=True)
+                return
+            # Non-rich tools: single LLM call to format the response (lean prompt, no tools)
             await ws.send_json({"type": "status", "text": "Composing response..."})
             messages = [{"role": "system", "content": FOLLOWUP_PROMPT}] + history
             first_token_time = None
-            full = await _stream_response(ws, client, messages, model, think)
+            full = await _stream_response(ws, client, messages, model, think_budget)
             history.append({"role": "assistant", "content": full})
             t_total = time.monotonic() - t0
             t_first = (first_token_time or t_total) - t0 if first_token_time else t_total
@@ -836,8 +887,10 @@ async def stream_ollama(ws: WebSocket, history: list, model: str,
         }
         if matched_tools:
             payload["tools"] = matched_tools
-        if not think:
+        if think_budget <= 0:
             payload["think"] = False
+        else:
+            payload["options"] = {"num_predict": think_budget}
 
         first_token_time = None
         async with client.stream("POST", "/api/chat", json=payload) as resp:
@@ -920,10 +973,15 @@ async def stream_ollama(ws: WebSocket, history: list, model: str,
                     "result": tool_result,
                 })
 
-            # Stream follow-up with lean prompt (no tool guidance needed after execution)
-            await ws.send_json({"type": "status", "text": "Composing response..."})
-            messages = [{"role": "system", "content": FOLLOWUP_PROMPT}] + history
-            full = await _stream_response(ws, client, messages, model, think)
+            # Check if all executed tools have rich UI — if so, skip follow-up text
+            executed_names = {tc.get("function", {}).get("name", "") for tc in tool_calls}
+            if executed_names and executed_names <= _RICH_UI_TOOLS:
+                pass  # rich UI cards speak for themselves
+            else:
+                # Stream follow-up with lean prompt (no tool guidance needed after execution)
+                await ws.send_json({"type": "status", "text": "Composing response..."})
+                messages = [{"role": "system", "content": FOLLOWUP_PROMPT}] + history
+                full = await _stream_response(ws, client, messages, model, think_budget)
 
         history.append({"role": "assistant", "content": full})
         t_total = time.monotonic() - t0
@@ -1585,13 +1643,13 @@ async def ws_endpoint(ws: WebSocket):
                 if len(history) > MAX_HISTORY:
                     history[:] = history[-MAX_HISTORY:]
 
-                # Auto-classify thinking need
-                think = False
+                # Auto-classify thinking budget
+                think_budget = 0
                 if auto_think:
                     await ws.send_json({"type": "status", "text": "Classifying..."})
-                    think = await classify_needs_thinking(text, model)
-                    await ws.send_json({"type": "think_decision", "enabled": think})
-                await stream_ollama(ws, history, model, think, memory)
+                    think_budget = await classify_thinking_budget(text, model)
+                    await ws.send_json({"type": "think_decision", "enabled": think_budget > 0, "budget": think_budget})
+                await stream_ollama(ws, history, model, think_budget, memory)
                 _post_response()
 
             elif msg_type == "text_input":
@@ -1603,12 +1661,12 @@ async def ws_endpoint(ws: WebSocket):
                 if len(history) > MAX_HISTORY:
                     history[:] = history[-MAX_HISTORY:]
 
-                think = False
+                think_budget = 0
                 if auto_think:
                     await ws.send_json({"type": "status", "text": "Classifying..."})
-                    think = await classify_needs_thinking(user_text, model)
-                    await ws.send_json({"type": "think_decision", "enabled": think})
-                await stream_ollama(ws, history, model, think, memory)
+                    think_budget = await classify_thinking_budget(user_text, model)
+                    await ws.send_json({"type": "think_decision", "enabled": think_budget > 0, "budget": think_budget})
+                await stream_ollama(ws, history, model, think_budget, memory)
                 _post_response()
 
             elif msg_type == "agent_start":

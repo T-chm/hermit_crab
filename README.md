@@ -6,7 +6,7 @@ An AI voice assistant that controls your music, lights, messages, and more — r
 >
 > 🎙️ **Voice-first.** Built around speech from day one. Push-to-talk or always-on listening with real-time voice activity detection. Not a chatbot with a mic taped on.
 >
-> 🔍 **Transparent.** ~400 lines of Python, single-file backend. No framework magic, no hidden abstractions. Read the entire codebase in 15 minutes and know exactly what runs when you say "turn off the lights."
+> 🔍 **Transparent.** Single-file backend, single-file frontend. No framework magic, no hidden abstractions. Read the entire codebase and know exactly what runs when you say "turn off the lights."
 >
 > 🧩 **Hackable.** Drop a Python file in `tools/` and it just works. No config files, no manifests, no registration — auto-discovered on startup.
 
@@ -26,8 +26,13 @@ Just ask naturally — Hermit Crab figures out the right tool.
 
 | | Tool | Try saying... | Setup |
 |---|---|---|---|
+| ☀️ | **Daily Brief** | "Good morning" · "Daily brief" · "Catch me up" | Gmail/Calendar OAuth (see below) |
 | 🎵 | **Music** | "Play some Coldplay" · "Next song" · "What's playing?" | Works with Apple Music. Spotify needs [spogo](https://github.com/steipete/spogo) |
 | 🌤️ | **Weather** | "What's the weather in Tokyo?" | Nothing — just works |
+| 📈 | **Stocks** | "How's Apple doing?" · "Market overview" · "TSLA" | Nothing — just works (uses yfinance) |
+| ✉️ | **Gmail** | "Check my email" · "Search emails from John" | Gmail OAuth (see below) |
+| 📅 | **Calendar** | "What's on my schedule?" · "Tomorrow's agenda" | Calendar OAuth (see below) |
+| ✈️ | **Trips** | "Upcoming trips" · "Add trips to calendar" | Gmail + Calendar OAuth |
 | 💡 | **Smart Home** | "Turn off the bedroom light" · "Set it to 50%" | `brew install openhue/cli/openhue-cli` |
 | ✅ | **Reminders** | "Remind me to call mom tomorrow" | `brew install steipete/tap/remindctl` |
 | 📝 | **Notes** | "Take a note called Meeting Notes" | Nothing — just works |
@@ -35,6 +40,76 @@ Just ask naturally — Hermit Crab figures out the right tool.
 | 💬 | **Messaging** | "Text John I'm running late" | `brew install steipete/tap/imsg` + Full Disk Access |
 
 Tools that need a CLI will tell you the exact install command if it's missing. The quick actions bar in the UI gives you one-tap shortcuts for the most common stuff.
+
+### Daily Brief
+
+Say "good morning" or "daily brief" and get a single dashboard card with:
+
+- **Weather** for your location (auto-detected from IP, or reads your city from memory)
+- **Stock watchlist** (reads your tickers from memory, or shows major indices)
+- **Unread emails** (top 3 with total count)
+- **Upcoming trips** (extracted from Gmail booking confirmations)
+- **Music suggestion** (rotates by time of day — morning energy, afternoon focus, evening jazz, etc.) with a one-tap Play button
+
+All four data sources are fetched in parallel (~5 seconds total).
+
+### Trips Tool
+
+The trips tool scans your Gmail for flight, hotel, Airbnb, car rental, train, and event bookings, then cross-references with your Google Calendar. It:
+
+- Searches 10 travel-related Gmail query patterns (airlines, OTAs, booking confirmations)
+- Uses Gmail batch API for performance (25+ emails fetched in a single HTTP request)
+- Recursively walks MIME trees for deeply nested HTML emails (e.g., Trip.com)
+- Extracts dates with context-awareness (check-in/check-out vs. cancellation deadlines)
+- Handles ordinal dates ("24th July 2026")
+- Filters noise (policy updates, marketing, surveys)
+- Can create calendar events with 1-day and 1-week reminders
+
+### Google OAuth Setup (Gmail, Calendar, Trips, Daily Brief)
+
+These tools require Google OAuth credentials:
+
+1. Create a project in [Google Cloud Console](https://console.cloud.google.com/)
+2. Enable the Gmail API and Google Calendar API
+3. Create OAuth 2.0 credentials (Desktop app type)
+4. Download `client_secret.json` to `~/.config/gws/client_secret.json`
+5. On first use, a browser window opens for consent. The token is cached at `~/.hermit_crab/google_token.json`
+
+## 🧠 Smart Features
+
+### Tiered Memory
+
+Hermit Crab remembers you across sessions:
+
+- **Working memory** — in-session compaction keeps context manageable
+- **Session memory** — per-session summaries saved to `~/.hermit_crab/sessions/`
+- **Core facts** — LLM-extracted user facts saved to `~/.hermit_crab/memory.json` (location, preferences, watchlist, etc.)
+
+The Daily Brief reads from core facts to personalize weather location and stock watchlist.
+
+### Adaptive Thinking
+
+When deep thinking mode is enabled, the LLM dynamically allocates a thinking budget based on query complexity:
+
+| Complexity | Budget | Examples |
+|---|---|---|
+| **None** | Off | Greetings, tool calls, simple facts |
+| **Light** | ~2K tokens | Explanations, comparisons, opinions |
+| **Deep** | ~8K tokens | Multi-step math, coding, debugging |
+
+A fast classifier call decides the tier before each response — no wasted thinking on simple requests.
+
+### Agent Mode
+
+Toggle agent mode for autonomous multi-step tasks. The agent plans, acts, evaluates, and iterates — useful for research or complex workflows that need multiple tool calls.
+
+### Rich UI Cards
+
+Tools with structured data (stocks, gmail, calendar, trips, daily brief) render as rich interactive cards — no redundant text summary underneath. Other tools (weather, music, reminders) still get an LLM-composed follow-up.
+
+### Direct Dispatch
+
+Common requests bypass the LLM entirely for instant response (~0s vs ~3.5s). Regex patterns match phrases like "pause the music", "what's the weather in London", "daily brief", "upcoming trips", etc. and dispatch directly to the right tool.
 
 ## 🎤 Two Ways to Talk
 
@@ -92,3 +167,4 @@ python3 whisper_ollama.py --loop   # continuous conversation
 | VAD triggers on noise | Slide the sensitivity slider to the right |
 | Music not working | Make sure Apple Music or Spotify is actually open |
 | "CLI not installed" | The error message tells you the exact `brew install` command to run |
+| Google auth error | Delete `~/.hermit_crab/google_token.json` and retry to re-authenticate |
