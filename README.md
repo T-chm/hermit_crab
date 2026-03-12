@@ -2,10 +2,15 @@
 
 A local-first AI assistant with extensible tools, adaptive reasoning, and full privacy control. Runs entirely on your machine — your data never leaves.
 
+## Get Started
+
 ```bash
-./setup.sh && ./run.sh
+./setup.sh          # installs Ollama, Python deps, Whisper model
+./run.sh            # starts Ollama + web server
 open http://localhost:8765
 ```
+
+For Gmail, Calendar, and Trips you'll need Google OAuth — see [SETUP.md](SETUP.md) for a 5-minute walkthrough. Everything else works immediately.
 
 ## Why Hermit Crab?
 
