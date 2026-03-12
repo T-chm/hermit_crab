@@ -15,26 +15,26 @@ Edit the top of `app.py`:
 | Setting | Default | What it does |
 |---|---|---|
 | `DEFAULT_LLM` | `qwen3.5:4b` | Ollama model to use |
-| `DEFAULT_WHISPER` | `base` | Whisper size: `tiny` (fast) → `large` (accurate) |
+| `DEFAULT_WHISPER` | `base` | Whisper size: `tiny` (fast) to `large` (accurate) |
 | `MAX_HISTORY` | `50` | Conversation memory length |
 
-Switch models from the UI dropdown, or pull new ones:
+You can switch models from the UI dropdown or pull new ones:
 
 ```bash
-ollama pull qwen2.5:3b    # smaller/faster
-ollama pull qwen2.5:14b   # bigger/smarter
+ollama pull qwen2.5:3b    # smaller, faster
+ollama pull qwen2.5:14b   # bigger, smarter
 ```
 
 ## Google OAuth (Gmail, Calendar, Trips, Daily Brief)
 
-These tools access your Google account and require OAuth credentials:
+These tools access your Google account and require OAuth credentials.
 
 1. Create a project in [Google Cloud Console](https://console.cloud.google.com/)
 2. Enable the **Gmail API** and **Google Calendar API**
 3. Create **OAuth 2.0 credentials** (Desktop app type)
 4. Download `client_secret.json` to `~/.config/gws/client_secret.json`
 5. On first use, a browser window opens for consent
-6. Token is cached at `~/.hermit_crab/google_token.json`
+6. The token is cached at `~/.hermit_crab/google_token.json`
 
 To re-authenticate, delete the token file and retry.
 
@@ -53,13 +53,13 @@ Most tools work out of the box. Some require external CLIs:
 
 Tools will tell you the exact install command if a dependency is missing.
 
-Apple Music works natively via AppleScript — no setup needed.
+Apple Music works natively via AppleScript. No setup needed.
 
 ## Voice Input
 
-**Push-to-talk** (default) — Click mic → speak → click mic to send.
+**Push-to-talk** (default). Click mic, speak, click mic to send.
 
-**Always-on** — Toggle "Always listen" in the UI. Adjust the sensitivity slider to ignore background noise.
+**Always-on**. Toggle "Always listen" in the UI. Adjust the sensitivity slider to ignore background noise.
 
 ## CLI Mode
 
@@ -86,7 +86,7 @@ To reset everything: `rm -rf ~/.hermit_crab`
 | Problem | Fix |
 |---|---|
 | "Cannot connect to Ollama" | Run `ollama serve` or use `./run.sh` |
-| No audio / mic not working | Allow mic access in browser. Only works on `localhost` or HTTPS |
+| No audio or mic not working | Allow mic access in browser. Only works on `localhost` or HTTPS |
 | Slow responses | Use a smaller model: `qwen2.5:3b` |
 | Slow transcription | Set `DEFAULT_WHISPER = "tiny"` in `app.py` |
 | VAD triggers on noise | Increase the sensitivity slider |
