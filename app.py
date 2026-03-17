@@ -208,6 +208,18 @@ _THINK_BUDGET = {"NONE": 0, "LIGHT": 2048, "DEEP": 16384}
 
 # Per-tool keyword routing — only send matching tool definitions to save TTFT
 _TOOL_KEYWORD_MAP = {
+    # --- Real Estate tools ---
+    "client_brief": [
+        "prep me", "brief me", "meeting with", "showing with",
+        "prepare for", "client brief", "meeting prep",
+        "prep for my", "ready for my",
+    ],
+    "client_memory": [
+        "client", "clients", "ingest", "conversations", "transcripts",
+        "wechat", "preferences", "dealbreaker", "must-have",
+        "property history", "client profile", "import conversations",
+    ],
+    # --- Retained general tools ---
     "weather": [
         "weather", "temperature", "forecast", "rain", "sunny", "snow", "wind", "humid",
         "degrees", "celsius", "fahrenheit",
@@ -248,7 +260,7 @@ def _select_tools(text: str) -> list:
 
 
 # Tools with rich UI cards — skip the follow-up LLM text response
-_RICH_UI_TOOLS = {"gmail", "calendar"}
+_RICH_UI_TOOLS = {"client_brief", "gmail", "calendar"}
 
 
 # ---------------------------------------------------------------------------
@@ -290,6 +302,37 @@ def _try_direct_dispatch(text: str, memory: "MemoryManager | None" = None) -> tu
     Returns (tool_name, args) or None if ambiguous."""
     lower = text.lower().strip()
     clean = lower.rstrip("?.!")
+
+    # === Client Brief (highest priority) ===
+    m = re.search(
+        r"\b(?:prep|prepare|brief)\s+(?:me\s+)?(?:for\s+)?(?:my\s+)?"
+        r"(?:meeting|showing|appointment)\s+(?:with\s+)?(.+?)(?:\s+at\s+(.+))?$",
+        lower,
+    )
+    if m:
+        client = m.group(1).strip().rstrip("?.!")
+        address = (m.group(2) or "").strip().rstrip("?.!")
+        args = {"client_name": client}
+        if address:
+            args["address"] = address
+        return ("client_brief", args)
+
+    # "brief me on <client>"
+    m = re.search(r"\bbrief\s+(?:me\s+)?(?:on|about)\s+(.+)", lower)
+    if m:
+        client = m.group(1).strip().rstrip("?.!")
+        return ("client_brief", {"client_name": client})
+
+    # === Client Memory ===
+    if re.search(r"\b(?:ingest|import|process)\s+(?:my\s+)?(?:wechat|weixin)\b", lower):
+        return ("client_memory", {"action": "ingest_wechat"})
+    if re.search(r"\b(?:ingest|import|process)\s+(?:my\s+)?(?:conversations?|transcripts?|messages?)\b", lower):
+        return ("client_memory", {"action": "ingest_wechat"})
+    if re.search(r"\b(?:list|show)\s+(?:my\s+)?(?:all\s+)?clients?\b", lower):
+        return ("client_memory", {"action": "list_clients"})
+    m = re.search(r"\b(?:show|tell)\s+(?:me\s+)?(?:about\s+)?(.+?)(?:'s|s')\s+(?:profile|preferences?|history|info)\b", lower)
+    if m:
+        return ("client_memory", {"action": "query", "client_name": m.group(1).strip()})
 
     # === Weather ===
     m = _WEATHER_RE.search(lower)
