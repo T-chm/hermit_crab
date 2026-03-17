@@ -37,26 +37,20 @@ OLLAMA_URL = "http://localhost:11434"
 DEFAULT_LLM = "qwen3.5:4b"
 DEFAULT_WHISPER = "base"
 SYSTEM_PROMPT = (
-    "You are Hermit Crab, a helpful and concise voice assistant running locally. "
+    "You are Hermit Crab Real Estate Edition, an AI assistant for real estate agents. "
+    "You help with client meeting preparation, property research, and daily tasks. "
     "Keep responses brief and conversational unless the user asks for detail. "
     "IMPORTANT: Only use tools when the user EXPLICITLY asks you to perform an action. "
     "Never call tools for greetings, questions, or general conversation.\n"
     "TOOL GUIDANCE:\n"
-    "- music_control: 'play music', 'pause', 'skip'. Use play_artist for artists "
-    "(e.g. 'play some Coldplay'), play_song with query+artist for specific songs "
-    "(e.g. 'play Volcano from U2' → query='Volcano', artist='U2').\n"
     "- weather: 'what's the weather in London', 'forecast for Tokyo'. Use brief "
     "for quick checks, current for detail, forecast for multi-day.\n"
-    "- smart_home: 'turn off the bedroom light', 'set living room to 50%', "
-    "'make it red', 'activate the relax scene'.\n"
-    "- reminders: 'remind me to call mom tomorrow', 'what are my reminders', "
-    "'show today's tasks'. Use add with title and due date.\n"
-    "- notes: 'take a note', 'find my note about recipes', 'list my notes'. "
+    "- reminders: 'remind me to follow up with the Doe family', 'show today's tasks'. "
+    "Use add with title and due date.\n"
+    "- notes: 'take a note about the Oak Lane showing', 'list my notes'. "
     "Use create with title and body.\n"
-    "- summarize: 'summarize this article/video' + URL. Handles web pages, "
-    "PDFs, and YouTube videos.\n"
-    "- messaging: 'text John I'm running late', 'read my messages', "
-    "'show recent conversations'. Always confirm before sending."
+    "- gmail: 'check my email', 'search emails from John Doe'.\n"
+    "- calendar: 'what's on my schedule', 'tomorrow's showings'."
 )
 MAX_HISTORY = 50  # trim oldest messages beyond this
 
@@ -218,31 +212,12 @@ _TOOL_KEYWORD_MAP = {
         "weather", "temperature", "forecast", "rain", "sunny", "snow", "wind", "humid",
         "degrees", "celsius", "fahrenheit",
     ],
-    "music_control": [
-        "play", "pause", "skip", "next", "previous", "stop music", "resume", "song",
-        "spotify", "music", "volume", "artist", "album", "track",
-    ],
-    "smart_home": [
-        "light", "lights", "lamp", "switch", "turn on", "turn off", "brightness",
-        "thermostat", "scene", "dim", "bedroom", "living room",
-    ],
     "reminders": [
-        "remind", "reminder", "alarm", "timer", "schedule", "task", "todo",
-        "due", "deadline",
+        "remind", "reminder", "alarm", "timer", "task", "todo",
+        "due", "deadline", "follow up",
     ],
     "notes": [
         "note", "notes", "write down", "jot down", "save this", "take a note",
-    ],
-    "summarize": [
-        "summarize", "summary", "tldr", "article", "youtube", "http://", "https://",
-    ],
-    "messaging": [
-        "text ", "message", "send", "sms", "call ",
-    ],
-    "stocks": [
-        "stock", "share price", "ticker", "market", "s&p", "dow",
-        "nasdaq", "crypto", "bitcoin", "ethereum", "portfolio",
-        "watchlist", "price of", "how is", "trading at",
     ],
     "gmail": [
         "email", "emails", "inbox", "unread", "gmail", "mail",
@@ -251,18 +226,7 @@ _TOOL_KEYWORD_MAP = {
     "calendar": [
         "calendar", "schedule", "meeting", "meetings", "agenda",
         "event", "events", "appointment", "free", "busy", "booked",
-        "what's on", "what do i have",
-    ],
-    "trips": [
-        "trip", "trips", "travel", "flight", "flights", "hotel", "hotels",
-        "vacation", "booking", "itinerary", "airbnb", "boarding pass",
-        "car rental", "train ticket", "upcoming trip", "travel plan",
-    ],
-    "daily_brief": [
-        "daily brief", "morning brief", "daily briefing", "morning briefing",
-        "daily summary", "morning summary", "daily update", "morning update",
-        "good morning", "status update", "brief me", "catch me up",
-        "what did i miss", "what's new", "whats new", "daily digest",
+        "what's on", "what do i have", "showing", "showings",
     ],
 }
 
@@ -284,7 +248,7 @@ def _select_tools(text: str) -> list:
 
 
 # Tools with rich UI cards — skip the follow-up LLM text response
-_RICH_UI_TOOLS = {"daily_brief", "stocks", "gmail", "calendar", "trips"}
+_RICH_UI_TOOLS = {"gmail", "calendar"}
 
 
 # ---------------------------------------------------------------------------
@@ -302,7 +266,6 @@ _WEATHER_RE2 = re.compile(
     r"\b(?:in|for|at)\s+(.+?)\s+(?:weather|temperature|forecast)\b",
     re.IGNORECASE,
 )
-_URL_RE = re.compile(r"(https?://\S+)")
 _REMIND_RE = re.compile(
     r"remind\s+(?:me\s+)?(?:to\s+)?(.+?)(?:\s+(?:at|by|on|tomorrow|today|tonight)\s*(.*))?$",
     re.IGNORECASE,
@@ -328,99 +291,7 @@ def _try_direct_dispatch(text: str, memory: "MemoryManager | None" = None) -> tu
     lower = text.lower().strip()
     clean = lower.rstrip("?.!")
 
-    # === Set default music app (preference, not a tool call) ===
-    m = re.search(
-        r"\b(?:switch|set|change|use)\b.*\b(spotify|apple\s*music)\b.*\b(?:for\s+)?(?:music|player|app|default)\b",
-        lower,
-    )
-    if not m:
-        m = re.search(
-            r"\b(?:switch|set|change|use)\b.*\b(?:music|player|app|default)\b.*\b(?:to\s+)?(spotify|apple\s*music)\b",
-            lower,
-        )
-    if not m:
-        # "change to apple music", "switch to spotify"
-        m = re.search(
-            r"\b(?:switch|change)\s+to\s+(spotify|apple\s*music)\b",
-            lower,
-        )
-    if m:
-        app = "spotify" if "spotify" in m.group(1) else "apple_music"
-        if memory:
-            # Update or add the preference in core facts
-            memory.core_facts = [
-                f for f in memory.core_facts
-                if "music" not in f.lower() or "prefer" not in f.lower()
-            ]
-            label = "Spotify" if app == "spotify" else "Apple Music"
-            memory.core_facts.append(f"Prefers {label} for music")
-            memory._save_core()
-        # Return a special sentinel — caller will handle as a status message
-        return ("_set_preference", {"key": "music_app", "value": app})
-
-    # === Daily Brief (checked FIRST — "good morning" should trigger brief, not conversation) ===
-    if re.search(r"\b(?:daily|morning)\s+(?:brief|briefing|summary|update|digest)\b", lower):
-        return ("daily_brief", {})
-    if re.search(r"\bbrief\s+me\b", lower):
-        return ("daily_brief", {})
-    if re.search(r"\bcatch\s+me\s+up\b", lower):
-        return ("daily_brief", {})
-    if re.search(r"\b(?:what(?:'s|s)?\s+new|whats\s+new)\b", lower):
-        return ("daily_brief", {})
-    if re.search(r"\b(?:status|daily)\s+(?:update|report)\b", lower):
-        return ("daily_brief", {})
-    if re.search(r"\bgood\s+morning\b", lower) and len(lower.split()) <= 4:
-        return ("daily_brief", {})
-
-    # === Music control (checked BEFORE weather to avoid "sunny weather" → weather) ===
-    def _music_app() -> dict:
-        if "spotify" in lower:
-            return {"app": "spotify"}
-        if "apple music" in lower:
-            return {"app": "apple_music"}
-        # Check memory for stored preference
-        if memory:
-            for fact in memory.core_facts:
-                fl = fact.lower()
-                if "prefer" in fl and "music" in fl:
-                    if "spotify" in fl:
-                        return {"app": "spotify"}
-                    if "apple" in fl:
-                        return {"app": "apple_music"}
-        return {}
-
-    # Simple playback: pause, skip, next, previous, current track
-    if re.search(r"\b(?:pause|stop)\s*(?:the\s+)?(?:music|song|playback)?\b", lower):
-        return ("music_control", {"action": "pause", **_music_app()})
-    if re.search(r"\b(?:skip|next)\s*(?:song|track)?\b", lower):
-        return ("music_control", {"action": "next", **_music_app()})
-    if re.search(r"\b(?:previous|prev|go back)\s*(?:song|track)?\b", lower):
-        return ("music_control", {"action": "previous", **_music_app()})
-    if re.search(r"\b(?:what(?:'s| is) playing|current (?:song|track)|now playing)\b", lower):
-        return ("music_control", {"action": "current_track", **_music_app()})
-
-    def _strip_app(s: str) -> str:
-        return re.sub(r"\s+on\s+(?:spotify|apple\s*music)\s*$", "", s).strip()
-
-    # "play <song> by <artist>"
-    m = re.search(r"\bplay\s+(.+?)\s+(?:by|from)\s+(.+)", lower)
-    if m:
-        song = m.group(1).strip().rstrip("?.!")
-        artist = _strip_app(m.group(2).strip().rstrip("?.!"))
-        song = re.sub(r"^(?:some|the|a)\s+(?:song|track|music\s+)?\s*", "", song).strip()
-        if song and artist:
-            return ("music_control", {"action": "play_song", "query": song, "artist": artist, **_music_app()})
-
-    # "play <query>"
-    m = re.search(r"\bplay\s+(?:some\s+|the\s+|music\s+by\s+)?(.+)", lower)
-    if m:
-        query = m.group(1).strip().rstrip("?.!")
-        query = re.sub(r"^(?:some|the|a)\s+(?:song|track|music\s+(?:by|from)\s+)?\s*", "", query).strip()
-        query = _strip_app(query)
-        if query:
-            return ("music_control", {"action": "play_artist", "query": query, **_music_app()})
-
-    # === Weather (after music, so "play X for sunny weather" doesn't trigger) ===
+    # === Weather ===
     m = _WEATHER_RE.search(lower)
     if not m:
         m = _WEATHER_RE2.search(lower)
@@ -434,42 +305,6 @@ def _try_direct_dispatch(text: str, memory: "MemoryManager | None" = None) -> tu
         location = _extract_memory_location(memory)
         detail = "forecast" if "forecast" in lower else "brief"
         return ("weather", {"location": location, "detail": detail})
-
-    # === Smart home ===
-    # "turn on/off <target>"
-    m = re.search(r"\bturn\s+(on|off)\s+(?:the\s+)?(.+)", lower)
-    if m:
-        action = "turn_on" if m.group(1) == "on" else "turn_off"
-        target = m.group(2).strip().rstrip("?.!")
-        return ("smart_home", {"action": action, "target": target})
-
-    # "set <target> to <value>%" / "dim <target> to <value>"
-    m = re.search(r"\b(?:set|dim)\s+(?:the\s+)?(.+?)\s+to\s+(\d+)\s*%?", lower)
-    if m:
-        target = m.group(1).strip()
-        value = m.group(2)
-        return ("smart_home", {"action": "set_brightness", "target": target, "value": value})
-
-    # "make it <color>" / "set <target> to <color>"
-    m = re.search(r"\b(?:set|change|make)\s+(?:the\s+)?(.+?)\s+(?:to\s+)?(\w+)\b", lower)
-    if m and m.group(2) in ("red", "blue", "green", "yellow", "purple", "orange", "pink", "white", "warm", "cool"):
-        target = m.group(1).strip()
-        if target in ("it", "them", "the light", "the lights"):
-            target = ""  # let the tool figure it out
-        return ("smart_home", {"action": "set_color", "target": target, "value": m.group(2)})
-
-    # "list lights/rooms/scenes"
-    if re.search(r"\blist\s+(?:my\s+)?(?:all\s+)?lights\b", lower):
-        return ("smart_home", {"action": "list_lights"})
-    if re.search(r"\blist\s+(?:my\s+)?(?:all\s+)?rooms\b", lower):
-        return ("smart_home", {"action": "list_rooms"})
-    if re.search(r"\blist\s+(?:my\s+)?(?:all\s+)?scenes\b", lower):
-        return ("smart_home", {"action": "list_scenes"})
-
-    # "activate/set <scene> scene"
-    m = re.search(r"\b(?:activate|set)\s+(?:the\s+)?(.+?)\s+scene\b", lower)
-    if m:
-        return ("smart_home", {"action": "set_scene", "target": m.group(1).strip()})
 
     # === Reminders ===
     # "remind me to X [tomorrow/today/at time]"
@@ -518,25 +353,6 @@ def _try_direct_dispatch(text: str, memory: "MemoryManager | None" = None) -> tu
     if re.search(r"\blist\s+(?:my\s+)?(?:all\s+)?notes\b", lower):
         return ("notes", {"action": "list"})
 
-    # === Summarize ===
-    m = _URL_RE.search(text)  # use original case for URL
-    if m and re.search(r"\b(?:summarize|summary|tldr)\b", lower):
-        length = "short" if "short" in lower or "tldr" in lower else "medium"
-        return ("summarize", {"url": m.group(1), "length": length})
-    # URL alone with no other context — assume summarize
-    if m and len(clean.split()) <= 3:
-        return ("summarize", {"url": m.group(1)})
-
-    # === Messaging ===
-    # "text/message <person> <message>"
-    m = re.search(r"\b(?:text|message|send\s+(?:a\s+)?(?:text|message)\s+to)\s+(\w+)\s+(.+)", lower)
-    if m:
-        return ("messaging", {"action": "send", "to": m.group(1).strip(), "text": m.group(2).strip().rstrip("?.!")})
-
-    # "read my messages" / "show messages" / "list chats"
-    if re.search(r"\b(?:read|show|check|list)\s+(?:my\s+)?(?:messages|chats|texts|conversations)\b", lower):
-        return ("messaging", {"action": "list_chats"})
-
     # === Gmail ===
     # "check my email" / "any new emails" / "show my inbox" / "unread emails"
     if re.search(r"\b(?:check|show|any|read|open)\s+(?:my\s+)?(?:email|emails|inbox|mail|gmail)\b", lower):
@@ -580,138 +396,6 @@ def _try_direct_dispatch(text: str, memory: "MemoryManager | None" = None) -> tu
     elif m:
         return ("calendar", {"action": "create", "title": ""})
 
-    # === Trips ===
-    # "add trips to calendar" / "create events for my trips" (check BEFORE scan patterns)
-    if re.search(r"\b(?:add|create|put)\s+(?:my\s+)?(?:trip|trips|travel|flight|flights)\s+(?:to|on|in)\s+(?:my\s+)?calendar\b", lower):
-        return ("trips", {"action": "create_events"})
-    if re.search(r"\b(?:create|add)\s+(?:calendar\s+)?(?:event|events|reminder|reminders)\s+(?:for|from)\s+(?:my\s+)?(?:trip|trips|travel|flight|flights)\b", lower):
-        return ("trips", {"action": "create_events"})
-    # "scan my trips" / "upcoming trips" / "any travel plans" / "check my flights"
-    if re.search(r"\b(?:upcoming|my|any|check|scan|show)\s+(?:upcoming\s+)?(?:trip|trips|travel|flight|flights|booking|bookings|vacation|itinerary)\b", lower):
-        return ("trips", {"action": "scan"})
-    if re.search(r"\b(?:travel|trip|flight)\s+(?:plan|plans|info|details|confirmation)\b", lower):
-        return ("trips", {"action": "scan"})
-    if re.search(r"\bwhat\s+(?:trips?|travel|flights?)\s+(?:do i have|are coming|am i)\b", lower):
-        return ("trips", {"action": "scan"})
-
-    # === Stocks ===
-    _STOCK_NAME_MAP = {
-        "apple": "AAPL", "google": "GOOG", "alphabet": "GOOG", "amazon": "AMZN",
-        "microsoft": "MSFT", "tesla": "TSLA", "nvidia": "NVDA", "meta": "META",
-        "facebook": "META", "netflix": "NFLX", "amd": "AMD", "intel": "INTC",
-        "disney": "DIS", "nike": "NKE", "coca cola": "KO", "coca-cola": "KO",
-        "pepsi": "PEP", "walmart": "WMT", "costco": "COST", "starbucks": "SBUX",
-        "uber": "UBER", "airbnb": "ABNB", "spotify": "SPOT", "paypal": "PYPL",
-        "shopify": "SHOP", "boeing": "BA", "jp morgan": "JPM", "jpmorgan": "JPM",
-        "goldman sachs": "GS", "berkshire": "BRK-B", "visa": "V", "mastercard": "MA",
-        "bitcoin": "BTC-USD", "btc": "BTC-USD", "ethereum": "ETH-USD", "eth": "ETH-USD",
-        "solana": "SOL-USD", "sol": "SOL-USD", "dogecoin": "DOGE-USD", "doge": "DOGE-USD",
-        "xrp": "XRP-USD",
-    }
-
-    _STOCK_NOISE = {"stock", "stocks", "share", "shares", "price", "quote",
-                     "ticker", "the", "a", "for", "of", "me", "my", "its", "is"}
-
-    def _resolve_ticker(phrase: str) -> str | None:
-        """Resolve a company name or ticker to a valid yfinance symbol."""
-        # Clean noise words from the phrase
-        raw = phrase.strip().lower().rstrip("?. ")
-        cleaned = " ".join(w for w in raw.split() if w not in _STOCK_NOISE).strip()
-        if not cleaned:
-            return None
-        # Check name map (exact)
-        if cleaned in _STOCK_NAME_MAP:
-            return _STOCK_NAME_MAP[cleaned]
-        # Check multi-word names in the full query
-        for name, tick in _STOCK_NAME_MAP.items():
-            if " " in name and name in lower:
-                return tick
-        # If it looks like an uppercase ticker (1-5 letters), use as-is
-        cu = cleaned.upper()
-        if re.match(r"^[A-Z]{1,5}$", cu):
-            return cu
-        # Try each word individually
-        for w in cleaned.split():
-            if w in _STOCK_NAME_MAP:
-                return _STOCK_NAME_MAP[w]
-            wu = w.upper()
-            if re.match(r"^[A-Z]{1,5}$", wu) and len(wu) >= 2:
-                return wu
-        return None
-
-    is_stock_query = any(kw in lower for kw in [
-        "stock", "price", "ticker", "share", "trading", "worth", "quote",
-        "crypto", "bitcoin", "ethereum", "market", "portfolio", "watchlist",
-    ])
-    # Also count it as a stock query if a known company/crypto name appears
-    is_name_match = any(name in lower for name in _STOCK_NAME_MAP)
-
-    # Market overview: "how is the market", "market overview", "stock market today"
-    if is_stock_query and re.search(r"\b(?:market|indices|index)(?:\s+(?:overview|update|today|doing))?\b", lower):
-        if not re.search(r"\b(?:price|stock)\s+(?:of|for)\b", lower):  # not "stock price of X"
-            return ("stocks", {"action": "market"})
-
-    # Bare ticker: "AAPL" or "AAPL stock" or "TSLA?" or "check AAPL"
-    m = re.match(r"^(?:check\s+|look\s*up\s+)?([A-Z]{1,5})(?:\s+(?:stock|share|price|quote))?\s*\??$", text.strip())
-    if m:
-        return ("stocks", {"action": "quote", "symbol": m.group(1)})
-
-    # Watchlist: "watchlist AAPL TSLA GOOG" or "compare AAPL and TSLA"
-    m = re.search(r"\b(?:watchlist|compare)\s+(.+)", lower)
-    if m:
-        raw = re.sub(r"\b(?:and|vs|with|stock|stocks)\b", ",", m.group(1))
-        syms = []
-        for w in re.split(r"[,\s]+", raw):
-            t = _resolve_ticker(w)
-            if t:
-                syms.append(t)
-        if len(syms) >= 2:
-            return ("stocks", {"action": "watchlist", "symbols": ",".join(syms)})
-
-    # Quote patterns (stock keyword or known company name)
-    if is_stock_query or is_name_match:
-        # Extract the subject — try several natural patterns
-        subject = None
-
-        # "price of X" / "quote for X" / "stock price of X"
-        m = re.search(r"\b(?:price|quote|value)\s+(?:of|for)\s+(.+?)(?:\s+stock|\s+share|\s*\??\s*$)", lower)
-        if m:
-            subject = m.group(1).strip().rstrip("?. ")
-
-        # "how is X doing/trading" / "how's X" / "how much is X" / "hows X"
-        if not subject:
-            m = re.search(r"\bhow(?:'?s|\s+(?:is|are|much\s+is))\s+(.+?)(?:\s+(?:doing|going|trading|stock|share|worth|today))?\s*\??$", lower)
-            if m:
-                candidate = m.group(1).strip()
-                if candidate not in ("the", "my", "the stock", "it"):
-                    subject = candidate
-
-        # "check X" / "look up X"
-        if not subject:
-            m = re.search(r"\b(?:check|look\s*up|get)\s+(.+?)(?:\s+(?:stock|share|price|quote|for me))?\s*\??$", lower)
-            if m:
-                candidate = m.group(1).strip()
-                if candidate not in ("the", "my", "the stock", "stock", "the market", "on"):
-                    subject = candidate
-
-        # "what is X at" / "what's X trading at" / "whats X at"
-        if not subject:
-            m = re.search(r"\bwhat(?:'?s|\s+is)\s+(.+?)(?:\s+(?:at|trading\s+at|worth|price|going for))?\s*\??$", lower)
-            if m:
-                candidate = m.group(1).strip()
-                if candidate not in ("the", "my", "the stock", "the market", "it", "that"):
-                    subject = candidate
-
-        # "X stock price" / "X shares"
-        if not subject:
-            m = re.search(r"^(.+?)\s+(?:stock|share|ticker)\s*(?:price|quote)?\s*\??$", lower)
-            if m:
-                subject = m.group(1).strip()
-
-        if subject:
-            ticker = _resolve_ticker(subject)
-            if ticker:
-                return ("stocks", {"action": "quote", "symbol": ticker})
 
     return None
 
@@ -826,18 +510,6 @@ async def stream_ollama(ws: WebSocket, history: list, model: str,
 
         # --- Fast path: direct dispatch for obvious tool requests (saves ~3.5s) ---
         direct = _try_direct_dispatch(last_user, memory) if matched_tools else None
-        if direct and direct[0] == "_set_preference":
-            # Handle preference changes without a tool call
-            key, value = direct[1]["key"], direct[1]["value"]
-            label = "Spotify" if value == "spotify" else "Apple Music"
-            reply = f"Got it! I've set {label} as your default music player."
-            history.append({"role": "assistant", "content": reply})
-            await ws.send_json({"type": "llm_token", "token": reply})
-            await ws.send_json({"type": "llm_done", "text": reply, "timing": {"first_token_ms": 0, "total_ms": 0}})
-            await ws.send_json({"type": "memory_status", **memory.memory_status()})
-            print(f"[perf] preference_set: {key}={value}", flush=True)
-            return
-
         if direct:
             tool_name, tool_args = direct
             print(f"[perf] direct_dispatch: {tool_name}({tool_args})", flush=True)
