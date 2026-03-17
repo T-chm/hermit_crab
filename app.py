@@ -209,7 +209,7 @@ CLASSIFY_PROMPT = (
 )
 
 # Thinking budget per complexity tier (num_predict = thinking + response tokens)
-_THINK_BUDGET = {"NONE": 0, "LIGHT": 2048, "DEEP": 8192}
+_THINK_BUDGET = {"NONE": 0, "LIGHT": 2048, "DEEP": 16384}
 
 
 # Per-tool keyword routing — only send matching tool definitions to save TTFT
@@ -864,8 +864,20 @@ async def stream_ollama(ws: WebSocket, history: list, model: str,
                 print(f"[perf] direct_dispatch(rich_ui): {tool_name} total={t_total:.2f}s", flush=True)
                 return
             # Non-rich tools: single LLM call to format the response (lean prompt, no tools)
+            # Use a plain user message with tool result inlined — avoids "role: tool"
+            # parsing issues across different model families and keeps prompt small.
             await ws.send_json({"type": "status", "text": "Composing response..."})
-            messages = [{"role": "system", "content": FOLLOWUP_PROMPT}] + history
+            last_user = next(
+                (m["content"] for m in reversed(history) if m.get("role") == "user"), ""
+            )
+            messages = [
+                {"role": "system", "content": FOLLOWUP_PROMPT},
+                {"role": "user", "content": (
+                    f"User asked: {last_user}\n"
+                    f"Tool '{tool_name}' returned:\n{tool_result}\n"
+                    "Summarize this naturally for the user."
+                )},
+            ]
             first_token_time = None
             full = await _stream_response(ws, client, messages, model, think_budget)
             history.append({"role": "assistant", "content": full})
@@ -978,9 +990,26 @@ async def stream_ollama(ws: WebSocket, history: list, model: str,
             if executed_names and executed_names <= _RICH_UI_TOOLS:
                 pass  # rich UI cards speak for themselves
             else:
-                # Stream follow-up with lean prompt (no tool guidance needed after execution)
+                # Stream follow-up with lean prompt — inline tool results as plain
+                # user message to avoid "role: tool" issues across model families.
                 await ws.send_json({"type": "status", "text": "Composing response..."})
-                messages = [{"role": "system", "content": FOLLOWUP_PROMPT}] + history
+                last_user = next(
+                    (m["content"] for m in reversed(history) if m.get("role") == "user"), ""
+                )
+                # Collect all tool results from the end of history
+                tool_summary_parts = []
+                for msg in history:
+                    if msg.get("role") == "tool":
+                        tool_summary_parts.append(msg["content"])
+                tool_summary = "\n".join(tool_summary_parts[-len(tool_calls):])
+                messages = [
+                    {"role": "system", "content": FOLLOWUP_PROMPT},
+                    {"role": "user", "content": (
+                        f"User asked: {last_user}\n"
+                        f"Tool results:\n{tool_summary}\n"
+                        "Summarize this naturally for the user."
+                    )},
+                ]
                 full = await _stream_response(ws, client, messages, model, think_budget)
 
         history.append({"role": "assistant", "content": full})
@@ -1566,6 +1595,19 @@ async def run_agent_loop(
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
+@app.get("/api/models")
+async def list_models():
+    """Return locally available Ollama models."""
+    try:
+        resp = await _ollama_client.get("/api/tags")
+        resp.raise_for_status()
+        models = resp.json().get("models", [])
+        names = sorted(m["name"] for m in models)
+        return {"models": names, "default": DEFAULT_LLM}
+    except Exception:
+        return {"models": [DEFAULT_LLM], "default": DEFAULT_LLM}
+
+
 @app.get("/")
 async def index():
     if _cached_index_html:
@@ -1716,8 +1758,20 @@ async def ws_endpoint(ws: WebSocket):
                 })
 
             elif msg_type == "set_model":
+                old_model = model
                 model = data.get("model", DEFAULT_LLM)
                 await ws.send_json({"type": "model_set", "model": model})
+                # Unload old model to free VRAM, then pre-warm the new one
+                try:
+                    if old_model != model:
+                        await _ollama_client.post("/api/chat", json={
+                            "model": old_model, "messages": [], "keep_alive": "0",
+                        })
+                    await _ollama_client.post("/api/chat", json={
+                        "model": model, "messages": [], "keep_alive": "10m",
+                    })
+                except Exception:
+                    pass
 
             elif msg_type == "set_auto_think":
                 auto_think = data.get("enabled", True)

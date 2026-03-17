@@ -2,7 +2,6 @@
 
 import json
 import random
-import subprocess
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
@@ -81,17 +80,23 @@ _GREETINGS = {
 
 
 def _fetch_weather(location: str) -> dict:
-    """Fetch one-line weather via wttr.in (bypasses weather tool's location check)."""
+    """Fetch one-line weather via Open-Meteo (free, no API key)."""
     try:
-        loc = urllib.parse.quote(location) if location else ""
-        url = f"wttr.in/{loc}?format=%l:+%c+%t+(feels+like+%f),+%w+wind,+%h+humidity"
-        r = subprocess.run(["curl", "-s", url], capture_output=True, text=True, timeout=10)
-        if r.returncode != 0 or not r.stdout.strip():
-            return {"ok": False, "error": "Could not fetch weather."}
-        text = r.stdout.strip()
-        # Clean up wttr.in's "not found:" prefix from IP-based geolocation
-        if text.lower().startswith("not found:"):
-            text = text[len("not found:"):].strip()
+        from tools.weather import _geocode, _describe_code, _fetch_json
+        loc = location if location else "Singapore"
+        display, lat, lon = _geocode(loc)
+        url = (
+            f"https://api.open-meteo.com/v1/forecast?"
+            f"latitude={lat}&longitude={lon}"
+            f"&current=temperature_2m,apparent_temperature,weather_code"
+            f"&timezone=auto"
+        )
+        data = _fetch_json(url)
+        c = data.get("current", {})
+        temp = c.get("temperature_2m")
+        feels = c.get("apparent_temperature")
+        cond = _describe_code(c.get("weather_code", 0))
+        text = f"{display}: {temp}C, {cond}, feels like {feels}C"
         return {"ok": True, "text": text}
     except Exception as e:
         return {"ok": False, "error": str(e)}

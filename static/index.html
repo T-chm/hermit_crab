@@ -715,11 +715,7 @@ html, body { height: 100%; }
         </div>
       </div>
       <select id="model-select" class="text-xs bg-md-surface-ctr-high text-md-on-surface border border-md-outline-var rounded-lg px-3 py-1.5 cursor-pointer outline-none focus:border-md-primary transition-colors font-sans font-medium">
-        <option value="qwen3.5:4b" selected>qwen3.5:4b</option>
-        <option value="qwen2.5:7b">qwen2.5:7b</option>
-        <option value="qwen2.5:3b">qwen2.5:3b</option>
-        <option value="qwen3:4b">qwen3:4b</option>
-        <option value="llama3.2">llama3.2</option>
+        <option value="">Loading models...</option>
       </select>
     </div>
   </header>
@@ -889,6 +885,33 @@ const TOOL_META = {
 };
 
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Fetch available models from Ollama
+// ---------------------------------------------------------------------------
+async function fetchModels() {
+  try {
+    const resp = await fetch('/api/models');
+    const { models, default: defaultModel } = await resp.json();
+    const saved = localStorage.getItem('model');
+    modelSelect.innerHTML = '';
+    models.forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      modelSelect.appendChild(opt);
+    });
+    // Restore saved selection, or fall back to server default
+    const target = saved && models.includes(saved) ? saved : defaultModel;
+    modelSelect.value = target;
+    if (ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({ type: 'set_model', model: target }));
+    }
+  } catch {
+    // Keep whatever is in the dropdown
+  }
+}
+
+// ---------------------------------------------------------------------------
 // WebSocket
 // ---------------------------------------------------------------------------
 function connectWS() {
@@ -900,6 +923,7 @@ function connectWS() {
     connDot.title = 'Connected';
     setStatus('Ready');
     ws.send(JSON.stringify({ type: 'set_auto_think', enabled: thinkToggle.checked }));
+    fetchModels();
   };
 
   ws.onclose = () => {
@@ -2146,6 +2170,7 @@ function stopAgent() {
 // Model select
 // ---------------------------------------------------------------------------
 modelSelect.addEventListener('change', function() {
+  localStorage.setItem('model', modelSelect.value);
   if (ws && ws.readyState === 1) {
     ws.send(JSON.stringify({ type: 'set_model', model: modelSelect.value }));
   }
@@ -2431,10 +2456,6 @@ thinkToggle.addEventListener('change', function() {
     ws.send(JSON.stringify({ type: 'set_auto_think', enabled: thinkToggle.checked }));
   }
 });
-modelSelect.addEventListener('change', function() {
-  localStorage.setItem('model', modelSelect.value);
-});
-
 // Agent mode
 agentToggle.checked = localStorage.getItem('agentMode') === 'true';
 agentToggle.addEventListener('change', function() {

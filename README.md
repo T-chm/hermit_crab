@@ -50,7 +50,9 @@ The Daily Brief pulls weather, your stock watchlist, unread emails, and upcoming
 |---|---|
 | Commands, facts, greetings | No thinking |
 | Explanations, comparisons | ~2K tokens |
-| Math, coding, debugging | ~8K tokens |
+| Math, coding, debugging | ~16K tokens |
+
+**Model switching.** Switch between any locally installed Ollama model from the UI dropdown. Models are dynamically fetched from Ollama on connect. The previous model is unloaded to free VRAM before loading the new one.
 
 **Memory.** Hermit Crab learns your preferences across sessions. Core facts like location, music taste, and stock watchlist are extracted and persisted. Tools like Daily Brief use these to personalize results without you repeating yourself.
 
