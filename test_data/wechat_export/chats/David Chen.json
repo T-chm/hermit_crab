@@ -1,0 +1,122 @@
+[
+  {
+    "chat": "David Chen",
+    "chat_username": "wxid_davidchen",
+    "time": "2026-01-20 11:00:00",
+    "timestamp": 1768881600,
+    "type": 1,
+    "content": "Hi, I'm looking for my first home. Budget is around $400-500k. Preferably a condo or townhouse in the downtown area.",
+    "status": 4,
+    "local_id": 1,
+    "server_id": 7528387001,
+    "db_file": "message_1.db"
+  },
+  {
+    "chat": "David Chen",
+    "chat_username": "wxid_davidchen",
+    "time": "2026-01-20 11:10:00",
+    "timestamp": 1768882200,
+    "type": 1,
+    "content": "Welcome David! Great to help you with your first home purchase. Do you have any specific requirements? Number of bedrooms, parking, etc?",
+    "status": 4,
+    "local_id": 2,
+    "server_id": 7528387002,
+    "db_file": "message_1.db"
+  },
+  {
+    "chat": "David Chen",
+    "chat_username": "wxid_davidchen",
+    "time": "2026-01-20 11:15:00",
+    "timestamp": 1768882500,
+    "type": 1,
+    "content": "At least 2 bedrooms. I have a golden retriever so the building needs to be pet-friendly. Parking would be nice but not a dealbreaker.",
+    "status": 4,
+    "local_id": 3,
+    "server_id": 7528387003,
+    "db_file": "message_1.db"
+  },
+  {
+    "chat": "David Chen",
+    "chat_username": "wxid_davidchen",
+    "time": "2026-02-01 15:00:00",
+    "timestamp": 1769950800,
+    "type": 1,
+    "content": "David, I found a nice 2-bed condo at 200 Park Ave, Unit 5B. $465k, pet-friendly building, has a dog park nearby. Want to schedule a viewing?",
+    "status": 4,
+    "local_id": 4,
+    "server_id": 7528387004,
+    "db_file": "message_1.db"
+  },
+  {
+    "chat": "David Chen",
+    "chat_username": "wxid_davidchen",
+    "time": "2026-02-01 15:20:00",
+    "timestamp": 1769952000,
+    "type": 1,
+    "content": "That sounds good! But I'm a bit nervous about the mortgage rates right now. Do you think it's a good time to buy? I don't want to overextend myself.",
+    "status": 4,
+    "local_id": 5,
+    "server_id": 7528387005,
+    "db_file": "message_1.db"
+  },
+  {
+    "chat": "David Chen",
+    "chat_username": "wxid_davidchen",
+    "time": "2026-02-05 11:00:00",
+    "timestamp": 1770296400,
+    "type": 1,
+    "content": "Saw the 200 Park Ave unit today. I really liked the layout and the natural light. But $465k feels a bit high for my comfort level. Is there room to negotiate?",
+    "status": 4,
+    "local_id": 6,
+    "server_id": 7528387006,
+    "db_file": "message_1.db"
+  },
+  {
+    "chat": "David Chen",
+    "chat_username": "wxid_davidchen",
+    "time": "2026-02-05 11:10:00",
+    "timestamp": 1770297000,
+    "type": 1,
+    "content": "It's been on market for 45 days so there might be some flexibility. I can try to get them down to $445-450k. Also, the HOA is $380/month which includes utilities.",
+    "status": 4,
+    "local_id": 7,
+    "server_id": 7528387007,
+    "db_file": "message_1.db"
+  },
+  {
+    "chat": "David Chen",
+    "chat_username": "wxid_davidchen",
+    "time": "2026-02-20 10:00:00",
+    "timestamp": 1771585200,
+    "type": 1,
+    "content": "Also checked out 88 River Walk, Unit 12A. $420k, 2 bed. Nice but the building doesn't allow dogs over 25 lbs. My retriever is 70 lbs so that's a no-go.",
+    "status": 4,
+    "local_id": 8,
+    "server_id": 7528387008,
+    "db_file": "message_1.db"
+  },
+  {
+    "chat": "David Chen",
+    "chat_username": "wxid_davidchen",
+    "time": "2026-03-05 14:00:00",
+    "timestamp": 1772730000,
+    "type": 1,
+    "content": "Hey, any new listings? I've been pre-approved for $480k now. Still want pet-friendly, at least 2 bed. Starting to feel more ready to pull the trigger.",
+    "status": 4,
+    "local_id": 9,
+    "server_id": 7528387009,
+    "db_file": "message_1.db"
+  },
+  {
+    "chat": "David Chen",
+    "chat_username": "wxid_davidchen",
+    "time": "2026-03-10 09:30:00",
+    "timestamp": 1773145800,
+    "type": 1,
+    "content": "Great news on the pre-approval! I have a new one: 150 Harbor Blvd, Unit 8C, $458k, 2 bed 2 bath, pet-friendly with no weight limit. In-unit laundry too. Available this weekend?",
+    "status": 4,
+    "local_id": 10,
+    "server_id": 7528387010,
+    "db_file": "message_1.db"
+  }
+]

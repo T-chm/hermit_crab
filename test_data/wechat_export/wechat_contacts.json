@@ -1,0 +1,23 @@
+[
+  {
+    "username": "wxid_zhangwei_lisa",
+    "nick_name": "张伟",
+    "remark": "张伟 & 李娜",
+    "alias": "zhangwei_lisa",
+    "display_name": "张伟 & 李娜"
+  },
+  {
+    "username": "wxid_davidchen",
+    "nick_name": "David Chen",
+    "remark": "David Chen",
+    "alias": "david_chen",
+    "display_name": "David Chen"
+  },
+  {
+    "username": "wxid_wangfang",
+    "nick_name": "王芳",
+    "remark": "王芳 (Fang)",
+    "alias": "wangfang",
+    "display_name": "王芳 (Fang)"
+  }
+]

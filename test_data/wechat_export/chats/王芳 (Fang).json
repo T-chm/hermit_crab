@@ -1,0 +1,122 @@
+[
+  {
+    "chat": "王芳 (Fang)",
+    "chat_username": "wxid_wangfang",
+    "time": "2026-02-01 10:00:00",
+    "timestamp": 1769932800,
+    "type": 1,
+    "content": "你好！我想卖掉我现在的房子，在322 Willow Street。4 bedrooms太大了，孩子们都搬出去了。我想downsizing到2 bedroom的condo。",
+    "status": 4,
+    "local_id": 1,
+    "server_id": 7528388001,
+    "db_file": "message_2.db"
+  },
+  {
+    "chat": "王芳 (Fang)",
+    "chat_username": "wxid_wangfang",
+    "time": "2026-02-01 10:10:00",
+    "timestamp": 1769933400,
+    "type": 1,
+    "content": "王女士您好！downsizing是个很好的决定。您现在的房子大概多大面积？有什么特别的features？",
+    "status": 4,
+    "local_id": 2,
+    "server_id": 7528388002,
+    "db_file": "message_2.db"
+  },
+  {
+    "chat": "王芳 (Fang)",
+    "chat_username": "wxid_wangfang",
+    "time": "2026-02-01 10:15:00",
+    "timestamp": 1769933700,
+    "type": 1,
+    "content": "2800 sqft, 4 bed 3 bath, 有个很好的garden。我们2015年remodel了kitchen和master bathroom。我觉得可以卖$650k左右？",
+    "status": 4,
+    "local_id": 3,
+    "server_id": 7528388003,
+    "db_file": "message_2.db"
+  },
+  {
+    "chat": "王芳 (Fang)",
+    "chat_username": "wxid_wangfang",
+    "time": "2026-02-10 14:00:00",
+    "timestamp": 1770721200,
+    "type": 1,
+    "content": "做了CMA分析，你的房子based on comps可以list在$680-$700k。Kitchen remodel和garden是很好的selling points。你觉得怎么样？",
+    "status": 4,
+    "local_id": 4,
+    "server_id": 7528388004,
+    "db_file": "message_2.db"
+  },
+  {
+    "chat": "王芳 (Fang)",
+    "chat_username": "wxid_wangfang",
+    "time": "2026-02-10 14:15:00",
+    "timestamp": 1770722100,
+    "type": 1,
+    "content": "那就list在$695k吧。对了我明年要retire了，想搬到离女儿近的地方，她在Riverside那边。",
+    "status": 4,
+    "local_id": 5,
+    "server_id": 7528388005,
+    "db_file": "message_2.db"
+  },
+  {
+    "chat": "王芳 (Fang)",
+    "chat_username": "wxid_wangfang",
+    "time": "2026-02-20 10:00:00",
+    "timestamp": 1771567200,
+    "type": 1,
+    "content": "staging的人来看过了，建议清理一下garage和spare bedroom的东西。你方便这周处理吗？另外photographer可以下周一来。",
+    "status": 4,
+    "local_id": 6,
+    "server_id": 7528388006,
+    "db_file": "message_2.db"
+  },
+  {
+    "chat": "王芳 (Fang)",
+    "chat_username": "wxid_wangfang",
+    "time": "2026-02-20 10:10:00",
+    "timestamp": 1771567800,
+    "type": 1,
+    "content": "好的这周末我收拾一下。周一photographer来没问题。对了open house定在哪天？我每周四要去做volunteer所以周四不行。",
+    "status": 4,
+    "local_id": 7,
+    "server_id": 7528388007,
+    "db_file": "message_2.db"
+  },
+  {
+    "chat": "王芳 (Fang)",
+    "chat_username": "wxid_wangfang",
+    "time": "2026-03-01 15:00:00",
+    "timestamp": 1772384400,
+    "type": 1,
+    "content": "Open house这周六开了，来了8组人。有两组很感兴趣，一组young couple一组investor。你觉得怎么样？",
+    "status": 4,
+    "local_id": 8,
+    "server_id": 7528388008,
+    "db_file": "message_2.db"
+  },
+  {
+    "chat": "王芳 (Fang)",
+    "chat_username": "wxid_wangfang",
+    "time": "2026-03-10 11:00:00",
+    "timestamp": 1773151200,
+    "type": 1,
+    "content": "收到一个offer了！$685k from the young couple. They want 30-day close. 你想accept还是counter？",
+    "status": 4,
+    "local_id": 9,
+    "server_id": 7528388009,
+    "db_file": "message_2.db"
+  },
+  {
+    "chat": "王芳 (Fang)",
+    "chat_username": "wxid_wangfang",
+    "time": "2026-03-10 11:15:00",
+    "timestamp": 1773152100,
+    "type": 1,
+    "content": "我想counter在$692k，30天close可以。等这边卖掉我就可以开始在Riverside找condo了。最好带elevator的building因为我膝盖不太好。",
+    "status": 4,
+    "local_id": 10,
+    "server_id": 7528388010,
+    "db_file": "message_2.db"
+  }
+]
