@@ -75,25 +75,23 @@ class TestPropertyLookup:
             assert result["beds"] == 4
             assert "Finished basement" in result["features"]
 
-    def test_zillow_fails_redfin_fallback(self):
-        """Falls back to Redfin when Zillow fails."""
-        mock_redfin = {
+    def test_zillow_scraper_success(self):
+        """Property lookup succeeds with mocked Zillow scraper."""
+        mock_data = {
             "price": 450000,
             "beds": 3,
             "baths": 2,
-            "source": "redfin",
+            "source": "zillow",
         }
 
-        with patch("tools.property_lookup._scrape_zillow", return_value=None), \
-             patch("tools.property_lookup._scrape_redfin", return_value=mock_redfin):
+        with patch("tools.property_lookup._scrape_zillow", return_value=mock_data):
             result = json.loads(prop_execute({"address": "123 Main St"}))
             assert result["error"] is None
-            assert result["source"] == "redfin"
+            assert result["source"] == "zillow"
 
     def test_all_scrapers_fail(self):
-        """Returns fallback when all scrapers fail."""
+        """Returns fallback when scraper fails."""
         with patch("tools.property_lookup._scrape_zillow", return_value=None), \
-             patch("tools.property_lookup._scrape_redfin", return_value=None), \
              patch("tools.browser.execute", return_value="Some page content here"):
             result = json.loads(prop_execute({"address": "123 Nowhere St"}))
             assert result is not None

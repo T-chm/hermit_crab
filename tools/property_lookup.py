@@ -1,8 +1,9 @@
-"""Property Lookup — scrape public property data via headless browser."""
+"""Property Lookup — scrape public property data via Zillow autocomplete + browser."""
 
 import json
 import re
 import urllib.parse
+import urllib.request
 
 DEFINITION = {
     "type": "function",
@@ -11,8 +12,7 @@ DEFINITION = {
         "description": (
             "Look up property details by address. Retrieves price, beds, baths, "
             "sqft, days on market, description, and features from public real "
-            "estate listings (Zillow, Redfin, Realtor.com). "
-            "Use when the user asks about a specific property or address."
+            "estate listings. Use when the user asks about a specific property or address."
         ),
         "parameters": {
             "type": "object",
@@ -27,6 +27,11 @@ DEFINITION = {
     },
 }
 
+_UA = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+)
+
 
 def _format_price(price) -> str:
     if price is None:
@@ -37,12 +42,47 @@ def _format_price(price) -> str:
         return str(price)
 
 
+def _zillow_autocomplete(address: str) -> dict | None:
+    """Use Zillow's autocomplete API to get zpid and address details."""
+    try:
+        query = urllib.parse.quote(address)
+        url = (
+            f"https://www.zillowstatic.com/autocomplete/v3/suggestions"
+            f"?q={query}&resultTypes=allAddress&resultCount=1"
+        )
+        req = urllib.request.Request(url, headers={"User-Agent": _UA})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read())
+        results = data.get("results", [])
+        if results:
+            return results[0].get("metaData", {})
+    except Exception:
+        pass
+    return None
+
+
+def _build_zillow_url(meta: dict) -> str:
+    """Build Zillow homedetails URL from autocomplete metadata."""
+    zpid = meta.get("zpid")
+    street = meta.get("streetNumber", "") + " " + meta.get("streetName", "")
+    city = meta.get("city", "")
+    state = meta.get("state", "")
+    zipcode = meta.get("zipCode", "")
+    slug = f"{street} {city} {state} {zipcode}".strip()
+    slug = re.sub(r"[,.]", "", slug).replace(" ", "-")
+    return f"https://www.zillow.com/homedetails/{slug}/{zpid}_zpid/"
+
+
 def _scrape_zillow(address: str) -> dict | None:
-    """Scrape property data from Zillow."""
-    from tools.browser import _ensure_browser
+    """Look up property via Zillow autocomplete API + browser scraping."""
+    # Step 1: Get zpid from autocomplete
+    meta = _zillow_autocomplete(address)
+    if not meta or not meta.get("zpid"):
+        return None
 
-    query = urllib.parse.quote(address)
-    url = f"https://www.zillow.com/homes/{query}_rb/"
+    # Step 2: Navigate to homedetails page with real Chrome
+    url = _build_zillow_url(meta)
+    from tools.browser import _ensure_browser
 
     page = None
     try:
@@ -50,70 +90,49 @@ def _scrape_zillow(address: str) -> dict | None:
         page.goto(url, wait_until="domcontentloaded", timeout=20000)
         page.wait_for_timeout(3000)
 
-        # Extract property data via JS
-        data = page.evaluate("""() => {
-            const result = {};
+        title = page.title()
+        if "denied" in title.lower() or "captcha" in title.lower():
+            return None
 
-            // Try to get price
-            const priceEl = document.querySelector('[data-testid="price"], .summary-container .price, .hdp__sc-1s2b8ok-0, span[data-testid="price"]');
-            if (priceEl) {
-                const priceText = priceEl.innerText.replace(/[^0-9]/g, '');
-                result.price = parseInt(priceText) || null;
-            }
+        text = page.evaluate("() => document.body.innerText || ''")
+        if "confirm you are" in text.lower():
+            return None
 
-            // Beds, baths, sqft from summary
-            const summaryItems = document.querySelectorAll('[data-testid="bed-bath-beyond"] span, .summary-container .bed-bath-item, .bdbs span');
-            const summaryText = document.body.innerText;
+        data = _extract_from_text(text)
+        if not (data.get("price") or data.get("beds")):
+            return None
 
-            const bedMatch = summaryText.match(/(\\d+)\\s*(?:bd|bed|bedroom)/i);
-            if (bedMatch) result.beds = parseInt(bedMatch[1]);
+        # Get address from page
+        addr = page.evaluate("""() => {
+            const el = document.querySelector('h1, [data-testid="bdp-header-address"]');
+            return el ? el.innerText.trim() : '';
+        }""")
+        if addr:
+            data["address"] = addr
 
-            const bathMatch = summaryText.match(/(\\d+\\.?\\d*)\\s*(?:ba|bath|bathroom)/i);
-            if (bathMatch) result.baths = parseFloat(bathMatch[1]);
+        # Get description
+        desc = page.evaluate("""() => {
+            const el = document.querySelector('[data-testid="description"], .comments, .Text-c11n-8-100-2__sc-aiai24-0');
+            return el ? el.innerText.substring(0, 300).trim() : '';
+        }""")
+        if desc:
+            data["description"] = desc
 
-            const sqftMatch = summaryText.match(/([\\d,]+)\\s*(?:sq\\s*ft|sqft|square\\s*feet)/i);
-            if (sqftMatch) result.sqft = parseInt(sqftMatch[1].replace(/,/g, ''));
-
-            // Address
-            const addrEl = document.querySelector('[data-testid="bdp-header-address"], h1, .hdp__sc-1s2b8ok-0');
-            if (addrEl) result.address = addrEl.innerText.trim();
-
-            // Description
-            const descEl = document.querySelector('[data-testid="description"], .comments, .Text-c11n-8-100-2__sc-aiai24-0');
-            if (descEl) result.description = descEl.innerText.substring(0, 300).trim();
-
-            // Status and days on market
-            const statusMatch = summaryText.match(/(Active|Pending|Sold|For Sale|Under Contract)/i);
-            if (statusMatch) result.status = statusMatch[1];
-
-            const domMatch = summaryText.match(/(\\d+)\\s*(?:day|days)\\s*(?:on|ago)/i);
-            if (domMatch) result.days_on_market = parseInt(domMatch[1]);
-
-            // Year built
-            const yearMatch = summaryText.match(/(?:built|year\\s*built)[:\\s]*(\\d{4})/i);
-            if (yearMatch) result.year_built = parseInt(yearMatch[1]);
-
-            // Features from facts section
-            const features = [];
-            document.querySelectorAll('.fact-value, .ds-overview-data li, [data-testid="fact-item"]').forEach(el => {
+        # Get features
+        features = page.evaluate("""() => {
+            const items = [];
+            document.querySelectorAll('.fact-value, [data-testid="fact-item"], .ds-overview-data li').forEach(el => {
                 const t = el.innerText.trim();
-                if (t && t.length < 60) features.push(t);
+                if (t && t.length < 60 && t.length > 2) items.push(t);
             });
-            if (features.length) result.features = features.slice(0, 15);
-
-            // Property type
-            const typeMatch = summaryText.match(/(Single Family|Condo|Townhouse|Multi[- ]Family|Manufactured|Apartment)/i);
-            if (typeMatch) result.property_type = typeMatch[1];
-
-            result.source = 'zillow';
-            result.url = window.location.href;
-
-            return result;
+            return items.slice(0, 15);
         }""")
+        if features:
+            data["features"] = features
 
-        if data and (data.get("price") or data.get("beds")):
-            return data
-        return None
+        data["source"] = "zillow"
+        data["url"] = page.url
+        return data
 
     except Exception:
         return None
@@ -125,52 +144,54 @@ def _scrape_zillow(address: str) -> dict | None:
                 pass
 
 
-def _scrape_redfin(address: str) -> dict | None:
-    """Scrape property data from Redfin."""
-    from tools.browser import _ensure_browser
+def _extract_from_text(text: str) -> dict:
+    """Extract property data from page text using regex."""
+    data = {}
+    # Price — look for Zestimate or listing price
+    for pattern in [
+        r"(?:Zestimate|Price|Listed)[^\$]*\$\s*([\d,]+)",
+        r"\$\s*([\d,]+)",
+    ]:
+        m = re.search(pattern, text)
+        if m:
+            val = int(m.group(1).replace(",", ""))
+            if val > 50000:  # filter noise
+                data["price"] = val
+                break
 
-    query = urllib.parse.quote(address)
-    url = f"https://www.redfin.com/search#query={query}"
+    bed_m = re.search(r"(\d+)\s*\n?\s*(?:bd|bed|bedroom)", text, re.IGNORECASE)
+    if bed_m:
+        data["beds"] = int(bed_m.group(1))
 
-    page = None
-    try:
-        page = _ensure_browser()
-        page.goto(url, wait_until="domcontentloaded", timeout=20000)
-        page.wait_for_timeout(3000)
+    bath_m = re.search(r"(\d+\.?\d*)\s*\n?\s*(?:ba|bath|bathroom)", text, re.IGNORECASE)
+    if bath_m:
+        data["baths"] = float(bath_m.group(1))
 
-        data = page.evaluate("""() => {
-            const result = {};
-            const text = document.body.innerText;
+    sqft_m = re.search(r"([\d,]+)\s*\n?\s*(?:sq\s*ft|sqft|square feet)", text, re.IGNORECASE)
+    if sqft_m:
+        data["sqft"] = int(sqft_m.group(1).replace(",", ""))
 
-            const priceMatch = text.match(/\\$([\\d,]+)/);
-            if (priceMatch) result.price = parseInt(priceMatch[1].replace(/,/g, ''));
+    status_m = re.search(r"\b(Active|Pending|Sold|For Sale|Under Contract|Off Market)\b", text, re.IGNORECASE)
+    if status_m:
+        data["status"] = status_m.group(1)
 
-            const bedMatch = text.match(/(\\d+)\\s*(?:Bd|Bed)/i);
-            if (bedMatch) result.beds = parseInt(bedMatch[1]);
+    dom_m = re.search(r"(\d+)\s*(?:day|days)\s*(?:on|ago)", text, re.IGNORECASE)
+    if dom_m:
+        data["days_on_market"] = int(dom_m.group(1))
 
-            const bathMatch = text.match(/(\\d+\\.?\\d*)\\s*(?:Ba|Bath)/i);
-            if (bathMatch) result.baths = parseFloat(bathMatch[1]);
+    year_m = re.search(r"(?:Built in|year\s*built)[:\s]*(\d{4})", text, re.IGNORECASE)
+    if year_m:
+        data["year_built"] = int(year_m.group(1))
 
-            const sqftMatch = text.match(/([\\d,]+)\\s*(?:Sq\\s*Ft|sqft)/i);
-            if (sqftMatch) result.sqft = parseInt(sqftMatch[1].replace(/,/g, ''));
+    type_m = re.search(r"\b(SingleFamily|Single Family|Condo|Townhouse)\b", text, re.IGNORECASE)
+    if type_m:
+        data["property_type"] = type_m.group(1)
 
-            result.source = 'redfin';
-            result.url = window.location.href;
-            return result;
-        }""")
+    lot_m = re.search(r"([\d.]+)\s*Acres?\s*Lot", text, re.IGNORECASE)
+    if lot_m:
+        data["lot_acres"] = float(lot_m.group(1))
 
-        if data and (data.get("price") or data.get("beds")):
-            return data
-        return None
-
-    except Exception:
-        return None
-    finally:
-        if page:
-            try:
-                page.close()
-            except Exception:
-                pass
+    return data
 
 
 def execute(args: dict) -> str:
@@ -178,27 +199,22 @@ def execute(args: dict) -> str:
     if not address:
         return json.dumps({"error": "Please provide a property address."})
 
-    # Try sources in order
-    for scraper in [_scrape_zillow, _scrape_redfin]:
-        try:
-            data = scraper(address)
-            if data:
-                data.setdefault("address", address)
-                data["price_formatted"] = _format_price(data.get("price"))
-                data["error"] = None
-                return json.dumps(data, ensure_ascii=False)
-        except Exception:
-            continue
+    # Try Zillow (autocomplete API + homedetails page)
+    data = _scrape_zillow(address)
+    if data:
+        data.setdefault("address", address)
+        data["price_formatted"] = _format_price(data.get("price"))
+        data["error"] = None
+        return json.dumps(data, ensure_ascii=False)
 
-    # Fallback: use the browser tool to get page content
+    # Fallback: browse the address as a URL
     try:
         from tools.browser import execute as browser_exec
-        query = urllib.parse.quote(address)
-        raw = browser_exec({"url": f"https://www.zillow.com/homes/{query}_rb/"})
+        raw = browser_exec({"url": f"https://www.zillow.com/homes/{urllib.parse.quote(address)}_rb/"})
         return json.dumps({
             "address": address,
             "description": raw[:500] if raw else "No data found.",
-            "error": "Could not extract structured data. Raw page content included.",
+            "error": "Could not extract structured property data.",
         })
     except Exception as e:
         return json.dumps({"address": address, "error": f"Property lookup failed: {e}"})

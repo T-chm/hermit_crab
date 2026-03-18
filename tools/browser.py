@@ -37,17 +37,33 @@ _USER_AGENT = (
 
 
 def _ensure_browser():
-    """Lazy-init headless Chromium. Returns a Page object."""
+    """Lazy-init browser with stealth settings. Returns a Page object.
+    Uses the real installed Chrome (channel='chrome') to avoid anti-bot detection.
+    Falls back to bundled Chromium if Chrome is not installed."""
     global _playwright, _browser, _context
     if _browser is None:
         from playwright.sync_api import sync_playwright
         _playwright = sync_playwright().start()
-        _browser = _playwright.chromium.launch(headless=True)
+        # Try real Chrome first (trusted by anti-bot), fall back to Chromium
+        for launch_opts in [
+            {"headless": False, "channel": "chrome", "args": ["--disable-blink-features=AutomationControlled", "--window-position=-2400,-2400"]},
+            {"headless": True, "args": ["--disable-blink-features=AutomationControlled"]},
+        ]:
+            try:
+                _browser = _playwright.chromium.launch(**launch_opts)
+                break
+            except Exception:
+                continue
+        if _browser is None:
+            raise RuntimeError("Could not launch browser. Install Chrome or run: playwright install chromium")
         _context = _browser.new_context(
             user_agent=_USER_AGENT,
             viewport={"width": 1280, "height": 800},
             locale="en-US",
         )
+        _context.add_init_script("""
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+        """)
     return _context.new_page()
 
 
