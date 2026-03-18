@@ -316,25 +316,30 @@ def _try_direct_dispatch(text: str, memory: "MemoryManager | None" = None) -> tu
     lower = text.lower().strip()
     clean = lower.rstrip("?.!")
 
+    # Detect language preference
+    _lang = "zh" if re.search(r"\b(?:in\s+chinese|chinese|中文|用中文)\b", lower) else "en"
+    # Strip language suffix from text for matching
+    _clean_lower = re.sub(r"\s+(?:in\s+chinese|chinese|中文|用中文)\s*$", "", lower).strip()
+
     # === Client Brief (highest priority) ===
     m = re.search(
         r"\b(?:prep|prepare|brief)\s+(?:me\s+)?(?:for\s+)?(?:my\s+)?"
         r"(?:meeting|showing|appointment)\s+(?:with\s+)?(.+?)(?:\s+at\s+(.+))?$",
-        lower,
+        _clean_lower,
     )
     if m:
         client = m.group(1).strip().rstrip("?.!")
         address = (m.group(2) or "").strip().rstrip("?.!")
-        args = {"client_name": client}
+        args = {"client_name": client, "language": _lang}
         if address:
             args["address"] = address
         return ("client_brief", args)
 
     # "brief me on <client>"
-    m = re.search(r"\bbrief\s+(?:me\s+)?(?:on|about)\s+(.+)", lower)
+    m = re.search(r"\bbrief\s+(?:me\s+)?(?:on|about)\s+(.+)", _clean_lower)
     if m:
         client = m.group(1).strip().rstrip("?.!")
-        return ("client_brief", {"client_name": client})
+        return ("client_brief", {"client_name": client, "language": _lang})
 
     # === Property Lookup ===
     m = re.search(

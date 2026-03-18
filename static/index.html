@@ -1535,9 +1535,15 @@ function renderCalendarBody(args, result) {
 // ---------------------------------------------------------------------------
 function renderToolActions(name, args) {
   switch (name) {
-    case 'client_brief':
+    case 'client_brief': {
+      const cn = escapeHtml(args.client_name || '').replace(/'/g, "\\'");
+      const curLang = args.language || 'en';
+      const toggleLang = curLang === 'zh' ? 'en' : 'zh';
+      const toggleLabel = curLang === 'zh' ? 'English' : '中文';
       return '<button onclick="quickAction(\'list my clients\')">All Clients</button>' +
-        '<button onclick="quickAction(\'brief me on ' + escapeHtml(args.client_name || '').replace(/'/g,"\\'") + '\')">Refresh</button>';
+        '<button onclick="quickAction(\'brief me on ' + cn + '\')">Refresh</button>' +
+        '<button onclick="sendBriefWithLang(\'' + cn + '\', \'' + toggleLang + '\')">' + toggleLabel + '</button>';
+    }
 
     case 'client_memory':
       return '<button onclick="quickAction(\'list my clients\')">All Clients</button>' +
@@ -1585,6 +1591,16 @@ function getDomain(url) {
 // ---------------------------------------------------------------------------
 function quickAction(text) {
   if (!ws || ws.readyState !== 1 || isProcessing) return;
+  ws.send(JSON.stringify({ type: 'text_input', text: text }));
+  isProcessing = true;
+  updateMicState();
+}
+
+function sendBriefWithLang(clientName, lang) {
+  if (!ws || ws.readyState !== 1 || isProcessing) return;
+  const text = lang === 'zh'
+    ? 'brief me on ' + clientName + ' in Chinese'
+    : 'brief me on ' + clientName;
   ws.send(JSON.stringify({ type: 'text_input', text: text }));
   isProcessing = true;
   updateMicState();

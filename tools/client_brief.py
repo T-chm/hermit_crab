@@ -27,6 +27,11 @@ DEFINITION = {
                     "type": "string",
                     "description": "Property address for the meeting/showing (optional).",
                 },
+                "language": {
+                    "type": "string",
+                    "enum": ["en", "zh"],
+                    "description": "Output language: en for English (default), zh for Chinese.",
+                },
             },
             "required": ["client_name"],
         },
@@ -35,7 +40,8 @@ DEFINITION = {
 
 OLLAMA_URL = "http://localhost:11434"
 
-ALIGNMENT_PROMPT = """\
+ALIGNMENT_PROMPT = {
+    "en": """\
 You are a real estate assistant analyzing how well a property matches a client's preferences.
 
 Client preferences:
@@ -50,9 +56,27 @@ Produce a JSON object with:
 - "score": one of "Strong match", "Good match", "Moderate match", or "Weak match"
 
 Return ONLY valid JSON, no explanation.
-"""
+""",
+    "zh": """\
+你是一个房地产助手，分析房产与客户需求的匹配程度。
 
-SUMMARY_PROMPT = """\
+客户需求：
+{preferences}
+
+房产详情：
+{property}
+
+生成一个JSON对象：
+- "matches": 字符串数组，描述房产如何满足客户需求
+- "concerns": 字符串数组，列出潜在问题或未知项
+- "score": "非常匹配"、"比较匹配"、"一般匹配"或"不太匹配"之一
+
+只返回有效JSON，不要解释。
+""",
+}
+
+SUMMARY_PROMPT = {
+    "en": """\
 You are a real estate assistant writing a meeting brief.
 Given the client data below, write a 1-2 sentence conversational summary for each section.
 Keep it natural and actionable — what should the agent know walking into this meeting?
@@ -67,7 +91,41 @@ Return ONLY valid JSON with these keys:
 - "particularities_summary": 1-2 sentence about personal details/icebreakers
 
 No explanation, just JSON.
-"""
+""",
+    "zh": """\
+你是一个房地产助手，正在撰写客户会面简报。
+根据以下客户资料，为每个部分写1-2句简洁实用的摘要。
+语气自然，重点是经纪人在见面前需要知道什么。
+
+客户资料：
+{client_data}
+
+只返回有效JSON，包含以下字段：
+- "recent_summary": 1-2句最近沟通摘要
+- "preferences_summary": 1-2句客户需求摘要
+- "history_summary": 1-2句看房历史摘要
+- "particularities_summary": 1-2句个人细节/破冰话题
+
+只返回JSON，不要解释。
+""",
+}
+
+SECTION_TITLES = {
+    "en": {
+        "recent_topics": "Recent Discussions",
+        "preferences": "Current Preferences",
+        "property_history": "Property History",
+        "particularities": "Personal Notes",
+        "property_alignment": "Property Alignment",
+    },
+    "zh": {
+        "recent_topics": "最近沟通",
+        "preferences": "当前需求",
+        "property_history": "看房记录",
+        "particularities": "个人备注",
+        "property_alignment": "房产匹配分析",
+    },
+}
 
 
 def _llm_call(prompt: str, user_msg: str) -> dict:
@@ -114,10 +172,11 @@ def _fetch_property(address: str) -> dict | None:
     return None
 
 
-def _build_brief(client: dict, property_data: dict | None) -> dict:
+def _build_brief(client: dict, property_data: dict | None, lang: str = "en") -> dict:
     """Build the brief JSON output."""
     v = client.get("vectors", {})
     prefs = v.get("preferences", {})
+    titles = SECTION_TITLES.get(lang, SECTION_TITLES["en"])
 
     # Format preferences for display
     budget_str = ""
@@ -128,19 +187,20 @@ def _build_brief(client: dict, property_data: dict | None) -> dict:
 
     # Generate summaries via LLM
     client_json = json.dumps(v, ensure_ascii=False)
+    prompt = SUMMARY_PROMPT.get(lang, SUMMARY_PROMPT["en"])
     try:
-        summaries = _llm_call(SUMMARY_PROMPT.format(client_data=client_json), "Generate summaries.")
+        summaries = _llm_call(prompt.format(client_data=client_json), "Generate summaries.")
     except Exception:
         summaries = {}
 
     brief = {
         "recent_topics": {
-            "title": "Recent Discussions",
+            "title": titles["recent_topics"],
             "summary": summaries.get("recent_summary", ""),
             "items": [t.get("summary", "") for t in v.get("recent_topics", [])[-5:]],
         },
         "preferences": {
-            "title": "Current Preferences",
+            "title": titles["preferences"],
             "summary": summaries.get("preferences_summary", ""),
             "budget": budget_str,
             "must_haves": prefs.get("must_haves", []),
@@ -148,7 +208,7 @@ def _build_brief(client: dict, property_data: dict | None) -> dict:
             "locations": prefs.get("locations", []),
         },
         "property_history": {
-            "title": "Property History",
+            "title": titles["property_history"],
             "summary": summaries.get("history_summary", ""),
             "items": [
                 {
@@ -160,7 +220,7 @@ def _build_brief(client: dict, property_data: dict | None) -> dict:
             ],
         },
         "particularities": {
-            "title": "Personal Notes",
+            "title": titles["particularities"],
             "summary": summaries.get("particularities_summary", ""),
             "items": v.get("particularities", []),
         },
@@ -168,9 +228,10 @@ def _build_brief(client: dict, property_data: dict | None) -> dict:
 
     # Property alignment (if property data available)
     if property_data:
+        align_prompt = ALIGNMENT_PROMPT.get(lang, ALIGNMENT_PROMPT["en"])
         try:
             alignment = _llm_call(
-                ALIGNMENT_PROMPT.format(
+                align_prompt.format(
                     preferences=json.dumps(prefs, ensure_ascii=False),
                     property=json.dumps(property_data, ensure_ascii=False),
                 ),
@@ -179,7 +240,7 @@ def _build_brief(client: dict, property_data: dict | None) -> dict:
         except Exception:
             alignment = {"matches": [], "concerns": [], "score": "Unknown"}
         brief["property_alignment"] = {
-            "title": "Property Alignment",
+            "title": titles["property_alignment"],
             "score": alignment.get("score", "Unknown"),
             "matches": alignment.get("matches", []),
             "concerns": alignment.get("concerns", []),
@@ -191,6 +252,7 @@ def _build_brief(client: dict, property_data: dict | None) -> dict:
 def execute(args: dict) -> str:
     client_name = args.get("client_name", "")
     address = args.get("address", "")
+    lang = args.get("language", "en")
 
     if not client_name:
         return json.dumps({"error": "Please specify a client name."})
@@ -209,11 +271,12 @@ def execute(args: dict) -> str:
             "Use 'ingest wechat' to import conversations first."
         })
 
-    brief = _build_brief(client, property_data)
+    brief = _build_brief(client, property_data, lang=lang)
 
     output = {
         "client_name": client.get("name", client_name),
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "language": lang,
         "property": property_data,
         "brief": brief,
         "error": None,
