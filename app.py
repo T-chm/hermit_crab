@@ -33,6 +33,7 @@ _cached_index_html: str | None = None
 # Browser bridge: page-agent extension communicates via this WebSocket
 _bridge_ws: WebSocket | None = None
 _bridge_responses: dict[str, asyncio.Queue] = {}  # task_id -> Queue for response
+_main_loop: asyncio.AbstractEventLoop | None = None  # set on startup for thread access
 
 # ---------------------------------------------------------------------------
 # Config
@@ -153,7 +154,8 @@ whisper_model = None
 
 @app.on_event("startup")
 async def startup():
-    global whisper_model, _ollama_client, _cached_index_html
+    global whisper_model, _ollama_client, _cached_index_html, _main_loop
+    _main_loop = asyncio.get_running_loop()
     print(f"Loading Whisper '{DEFAULT_WHISPER}' model...")
     whisper_model = whisper.load_model(DEFAULT_WHISPER)
     # Persistent connection pool for all Ollama calls

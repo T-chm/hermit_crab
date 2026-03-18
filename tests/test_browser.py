@@ -23,7 +23,7 @@ class TestBrowserTool:
         """Browser tool returns error when bridge not connected."""
         from tools.browser import execute
         result = execute({"task": "go to example.com"})
-        assert "bridge" in result.lower() or "not available" in result.lower() or "error" in result.lower()
+        assert "bridge" in result.lower() or "not available" in result.lower() or "error" in result.lower() or "not fully started" in result.lower()
 
     def test_empty_task(self):
         from tools.browser import execute

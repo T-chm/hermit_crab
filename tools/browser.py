@@ -37,18 +37,13 @@ def execute(args: dict) -> str:
         return "Please specify a browsing task."
 
     # execute() runs in a thread via asyncio.to_thread() in app.py.
-    # We need to send the task to the bridge WS on the main event loop.
+    # Use the main event loop reference stored at startup.
     try:
-        from app import send_browser_task
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            # We're in a thread — schedule coroutine on the running loop
-            future = asyncio.run_coroutine_threadsafe(
-                send_browser_task(task), loop
-            )
-            return future.result(timeout=130)
-        else:
-            return asyncio.run(send_browser_task(task))
+        from app import send_browser_task, _main_loop
+        if _main_loop is None:
+            return "Server not fully started yet. Please try again."
+        future = asyncio.run_coroutine_threadsafe(send_browser_task(task), _main_loop)
+        return future.result(timeout=130)
     except ImportError:
         return "Browser bridge not available (app module not loaded)."
     except TimeoutError:
