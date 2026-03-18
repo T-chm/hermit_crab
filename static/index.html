@@ -253,6 +253,25 @@ html, body { height: 100%; }
 .cb-match { font-size: 0.688rem; color: #4caf50; }
 .cb-concern { font-size: 0.688rem; color: #ffc107; }
 
+/* ---- Property Lookup ---- */
+.tool-card.tool-property_lookup { border-left-color: #7e57c2; }
+.tool-card.tool-property_lookup .tool-label { color: #7e57c2; }
+.tool-card.tool-browser { border-left-color: #78909c; }
+.tool-card.tool-browser .tool-label { color: #78909c; }
+.prop-card { display: flex; flex-direction: column; gap: 8px; }
+.prop-header { display: flex; justify-content: space-between; align-items: baseline; }
+.prop-address { font-size: 1rem; font-weight: 700; }
+.prop-status { font-size: 0.625rem; font-weight: 600; padding: 2px 8px; border-radius: 8px; background: var(--md-surface-ctr-high); }
+.prop-status.active { background: rgba(76,175,80,0.15); color: #4caf50; }
+.prop-price { font-size: 1.3rem; font-weight: 700; color: #7e57c2; }
+.prop-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; }
+.prop-stat-value { font-size: 1rem; font-weight: 700; color: var(--md-on-surface); }
+.prop-stat-label { font-size: 0.563rem; color: var(--md-on-surface-var); text-transform: uppercase; }
+.prop-features { display: flex; flex-wrap: wrap; gap: 4px; }
+.prop-feature { font-size: 0.625rem; padding: 2px 8px; border-radius: 8px; background: var(--md-surface-ctr-high); border: 1px solid var(--md-outline-var); color: var(--md-on-surface-var); }
+.prop-desc { font-size: 0.75rem; color: var(--md-on-surface-var); line-height: 1.4; }
+.prop-meta { font-size: 0.625rem; color: var(--md-on-surface-var); display: flex; gap: 12px; }
+
 /* ---- Stocks ---- */
 .stock-quote { display: flex; flex-direction: column; gap: 10px; }
 .stock-header { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
@@ -901,7 +920,9 @@ let agentRunning = false;
 // ---------------------------------------------------------------------------
 const TOOL_META = {
   client_brief:    { icon: '\uD83D\uDCCB', label: 'Client Brief',    accent: '#26a69a' },
+  property_lookup: { icon: '\uD83C\uDFE0', label: 'Property',        accent: '#7e57c2' },
   client_memory:   { icon: '\uD83D\uDC64', label: 'Client Memory',   accent: '#42a5f5' },
+  browser:         { icon: '\uD83C\uDF10', label: 'Browser',         accent: '#78909c' },
   weather:         { icon: '\u26C5', label: 'Weather',    accent: '#64b5f6' },
   reminders:       { icon: '\u2705', label: 'Reminders',  accent: '#81c784' },
   notes:           { icon: '\uD83D\uDCDD', label: 'Notes',       accent: '#ce93d8' },
@@ -1339,9 +1360,13 @@ function getToolDetail(name, args) {
   switch (name) {
     case 'client_brief':
       return args.client_name ? args.client_name + (args.address ? ' @ ' + args.address : '') : '';
+    case 'property_lookup':
+      return args.address || '';
     case 'client_memory':
       if (args.action === 'query') return args.client_name || '';
       return formatAction(args.action);
+    case 'browser':
+      return args.task ? args.task.substring(0, 60) : '';
     case 'weather': return args.location || '';
     case 'reminders': return args.title || formatAction(args.action);
     case 'notes': return args.title || formatAction(args.action);
@@ -1409,13 +1434,49 @@ function getResultDetail(name, args, result) {
 // ---------------------------------------------------------------------------
 function renderToolBody(name, args, result) {
   switch (name) {
-    case 'client_brief':  return renderClientBriefBody(args, result);
-    case 'weather':       return renderWeatherBody(result);
+    case 'client_brief':    return renderClientBriefBody(args, result);
+    case 'property_lookup': return renderPropertyBody(args, result);
+    case 'weather':         return renderWeatherBody(result);
     case 'reminders':     return renderRemindersBody(args, result);
     case 'notes':         return renderNotesBody(args, result);
     case 'gmail':         return renderGmailBody(args, result);
     case 'calendar':      return renderCalendarBody(args, result);
     default:              return '<div class="tool-result-text">' + escapeHtml(result) + '</div>';
+  }
+}
+
+function renderPropertyBody(args, result) {
+  try {
+    const d = typeof result === 'string' ? JSON.parse(result) : result;
+    if (d.error && !d.price) return '<div class="tool-result-text" style="color:#ef5350">' + escapeHtml(d.error) + (d.description ? '<br>' + escapeHtml(d.description) : '') + '</div>';
+    let html = '<div class="prop-card">';
+    html += '<div class="prop-header"><span class="prop-address">' + escapeHtml(d.address || '') + '</span>';
+    if (d.status) {
+      const sc = d.status.toLowerCase() === 'active' ? 'active' : '';
+      html += '<span class="prop-status ' + sc + '">' + escapeHtml(d.status) + '</span>';
+    }
+    html += '</div>';
+    if (d.price_formatted) html += '<div class="prop-price">' + escapeHtml(d.price_formatted) + '</div>';
+    html += '<div class="prop-stats">';
+    if (d.beds) html += '<div><div class="prop-stat-value">' + d.beds + '</div><div class="prop-stat-label">Beds</div></div>';
+    if (d.baths) html += '<div><div class="prop-stat-value">' + d.baths + '</div><div class="prop-stat-label">Baths</div></div>';
+    if (d.sqft) html += '<div><div class="prop-stat-value">' + d.sqft.toLocaleString() + '</div><div class="prop-stat-label">Sqft</div></div>';
+    if (d.days_on_market != null) html += '<div><div class="prop-stat-value">' + d.days_on_market + '</div><div class="prop-stat-label">DOM</div></div>';
+    html += '</div>';
+    if (d.features && d.features.length) {
+      html += '<div class="prop-features">';
+      for (const f of d.features) html += '<span class="prop-feature">' + escapeHtml(f) + '</span>';
+      html += '</div>';
+    }
+    if (d.description) html += '<div class="prop-desc">' + escapeHtml(d.description.substring(0, 300)) + '</div>';
+    html += '<div class="prop-meta">';
+    if (d.property_type) html += '<span>' + escapeHtml(d.property_type) + '</span>';
+    if (d.year_built) html += '<span>Built ' + d.year_built + '</span>';
+    if (d.source) html += '<span>via ' + escapeHtml(d.source) + '</span>';
+    html += '</div></div>';
+    return html;
+  } catch (e) {
+    return '<div class="tool-result-text">' + escapeHtml(result) + '</div>';
   }
 }
 

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hermit Crab Bridge</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #1a1a2e; color: #e0e0e0; margin: 0; padding: 20px; }
+  .card { max-width: 480px; margin: 40px auto; background: #16213e; border-radius: 12px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+  h1 { font-size: 1.1rem; margin: 0 0 16px; display: flex; align-items: center; gap: 8px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .dot.green { background: #4caf50; box-shadow: 0 0 8px #4caf50; }
+  .dot.yellow { background: #ffc107; box-shadow: 0 0 8px #ffc107; }
+  .dot.red { background: #ef5350; box-shadow: 0 0 8px #ef5350; }
+  .status { font-size: 0.8rem; color: #aaa; margin-bottom: 12px; }
+  .task { font-size: 0.85rem; background: #0f3460; padding: 10px 14px; border-radius: 8px; margin-top: 8px; min-height: 24px; word-break: break-word; }
+  .task.empty { color: #666; font-style: italic; }
+  .log { font-size: 0.7rem; color: #888; margin-top: 12px; max-height: 200px; overflow-y: auto; }
+  .log div { padding: 2px 0; border-bottom: 1px solid #1a1a2e; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1><span>🏠</span> Hermit Crab Bridge <span id="ws-dot" class="dot red"></span></h1>
+  <div class="status" id="ws-status">Connecting to server...</div>
+  <div class="status" id="ext-status">Extension: checking...</div>
+  <div class="task empty" id="current-task">No active task</div>
+  <div class="log" id="log"></div>
+</div>
+
+<script>
+const wsDot = document.getElementById('ws-dot');
+const wsStatus = document.getElementById('ws-status');
+const extStatus = document.getElementById('ext-status');
+const taskEl = document.getElementById('current-task');
+const logEl = document.getElementById('log');
+
+let ws = null;
+let extReady = false;
+
+function log(msg) {
+  const d = document.createElement('div');
+  d.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  logEl.prepend(d);
+  if (logEl.children.length > 50) logEl.lastChild.remove();
+}
+
+// Check for page-agent extension
+async function checkExtension() {
+  if (window.PAGE_AGENT_EXT) {
+    extReady = true;
+    extStatus.textContent = 'Extension: connected (v' + (window.PAGE_AGENT_EXT_VERSION || '?') + ')';
+    log('Page-agent extension detected');
+    return true;
+  }
+  // Wait for it
+  for (let i = 0; i < 20; i++) {
+    await new Promise(r => setTimeout(r, 500));
+    if (window.PAGE_AGENT_EXT) {
+      extReady = true;
+      extStatus.textContent = 'Extension: connected (v' + (window.PAGE_AGENT_EXT_VERSION || '?') + ')';
+      log('Page-agent extension detected');
+      return true;
+    }
+  }
+  extStatus.textContent = 'Extension: not found. Install page-agent extension and set auth token.';
+  log('Page-agent extension not detected after 10s');
+  return false;
+}
+
+function connectWS() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/ws-bridge`);
+
+  ws.onopen = () => {
+    wsDot.className = 'dot green';
+    wsStatus.textContent = 'Server: connected';
+    log('WebSocket connected to Hermit Crab');
+  };
+
+  ws.onclose = () => {
+    wsDot.className = 'dot red';
+    wsStatus.textContent = 'Server: disconnected. Reconnecting...';
+    log('WebSocket disconnected');
+    setTimeout(connectWS, 3000);
+  };
+
+  ws.onerror = () => {};
+
+  ws.onmessage = async (ev) => {
+    const data = JSON.parse(ev.data);
+
+    if (data.type === 'browser_task') {
+      const taskId = data.task_id;
+      const task = data.task;
+      const config = data.config || {};
+
+      log(`Task received: ${task.substring(0, 80)}...`);
+      taskEl.className = 'task';
+      taskEl.textContent = task;
+
+      if (!extReady) {
+        ws.send(JSON.stringify({
+          type: 'browser_result',
+          task_id: taskId,
+          success: false,
+          data: 'Page-agent extension not connected. Install the extension and set the auth token on this page.',
+        }));
+        return;
+      }
+
+      try {
+        // Update status dot to yellow while working
+        wsDot.className = 'dot yellow';
+
+        const result = await window.PAGE_AGENT_EXT.execute(task, {
+          ...config,
+          onStatusChange: (status) => {
+            ws.send(JSON.stringify({ type: 'browser_status', task_id: taskId, status }));
+            log(`Status: ${status}`);
+          },
+          onActivity: (activity) => {
+            if (activity && activity.type) {
+              log(`Activity: ${activity.type}`);
+            }
+          },
+        });
+
+        wsDot.className = 'dot green';
+        taskEl.className = 'task empty';
+        taskEl.textContent = 'No active task';
+
+        ws.send(JSON.stringify({
+          type: 'browser_result',
+          task_id: taskId,
+          success: result.success !== false,
+          data: result.data || JSON.stringify(result),
+        }));
+        log(`Task complete: success=${result.success !== false}`);
+
+      } catch (err) {
+        wsDot.className = 'dot green';
+        taskEl.className = 'task empty';
+        taskEl.textContent = 'No active task';
+
+        ws.send(JSON.stringify({
+          type: 'browser_result',
+          task_id: taskId,
+          success: false,
+          data: `Extension error: ${err.message || err}`,
+        }));
+        log(`Task error: ${err.message || err}`);
+      }
+    }
+  };
+}
+
+// Init
+checkExtension();
+connectWS();
+</script>
+</body>
+</html>

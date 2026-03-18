@@ -30,6 +30,10 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 _ollama_client: httpx.AsyncClient | None = None
 _cached_index_html: str | None = None
 
+# Browser bridge: page-agent extension communicates via this WebSocket
+_bridge_ws: WebSocket | None = None
+_bridge_responses: dict[str, asyncio.Queue] = {}  # task_id -> Queue for response
+
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
@@ -214,10 +218,19 @@ _TOOL_KEYWORD_MAP = {
         "prepare for", "client brief", "meeting prep",
         "prep for my", "ready for my",
     ],
+    "property_lookup": [
+        "property", "listing", "look up", "address", "zillow", "redfin",
+        "realtor", "mls", "beds", "baths", "sqft", "days on market",
+        "how much is", "what's listed",
+    ],
     "client_memory": [
         "client", "clients", "ingest", "conversations", "transcripts",
         "wechat", "preferences", "dealbreaker", "must-have",
         "property history", "client profile", "import conversations",
+    ],
+    "browser": [
+        "browse", "search the web", "go to", "open url",
+        "web search", "look up online", "scrape", "website",
     ],
     # --- Retained general tools ---
     "weather": [
@@ -260,7 +273,7 @@ def _select_tools(text: str) -> list:
 
 
 # Tools with rich UI cards — skip the follow-up LLM text response
-_RICH_UI_TOOLS = {"client_brief", "gmail", "calendar"}
+_RICH_UI_TOOLS = {"client_brief", "property_lookup", "gmail", "calendar"}
 
 
 # ---------------------------------------------------------------------------
@@ -322,6 +335,16 @@ def _try_direct_dispatch(text: str, memory: "MemoryManager | None" = None) -> tu
     if m:
         client = m.group(1).strip().rstrip("?.!")
         return ("client_brief", {"client_name": client})
+
+    # === Property Lookup ===
+    m = re.search(
+        r"\b(?:look\s+up|pull\s+up|show\s+me|what(?:'s| is))\s+(?:the\s+)?(?:property|listing|house|home)?\s*"
+        r"(?:at|for|on)?\s*(\d+.+)",
+        lower,
+    )
+    if m:
+        address = m.group(1).strip().rstrip("?.!")
+        return ("property_lookup", {"address": address})
 
     # === Client Memory ===
     if re.search(r"\b(?:ingest|import|process)\s+(?:my\s+)?(?:wechat|weixin)\b", lower):
@@ -1310,6 +1333,66 @@ async def run_agent_loop(
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
+@app.get("/bridge")
+async def bridge_page():
+    """Serve the browser bridge page."""
+    html = Path(__file__).parent / "static" / "bridge.html"
+    return HTMLResponse(html.read_text())
+
+
+@app.websocket("/ws-bridge")
+async def ws_bridge(ws: WebSocket):
+    """WebSocket endpoint for the page-agent browser extension bridge."""
+    global _bridge_ws
+    await ws.accept()
+    _bridge_ws = ws
+    print("[bridge] Extension bridge connected", flush=True)
+    try:
+        while True:
+            msg = await ws.receive()
+            if "text" not in msg:
+                continue
+            data = json.loads(msg["text"])
+            msg_type = data.get("type")
+            task_id = data.get("task_id", "")
+
+            if msg_type == "browser_result" and task_id in _bridge_responses:
+                await _bridge_responses[task_id].put(data)
+            elif msg_type == "browser_status":
+                pass  # Could forward to main WS for progress UI
+    except WebSocketDisconnect:
+        _bridge_ws = None
+        print("[bridge] Extension bridge disconnected", flush=True)
+
+
+async def send_browser_task(task: str, config: dict | None = None, timeout: float = 120) -> str:
+    """Send a browsing task to the page-agent extension via the bridge and await the result."""
+    if _bridge_ws is None:
+        return "Browser bridge not connected. Open http://localhost:8765/bridge in Chrome with the page-agent extension installed."
+
+    task_id = str(uuid.uuid4())
+    queue: asyncio.Queue = asyncio.Queue()
+    _bridge_responses[task_id] = queue
+
+    try:
+        await _bridge_ws.send_json({
+            "type": "browser_task",
+            "task_id": task_id,
+            "task": task,
+            "config": config or {},
+        })
+        result = await asyncio.wait_for(queue.get(), timeout=timeout)
+        if result.get("success"):
+            return result.get("data", "")
+        return f"Browser task failed: {result.get('data', 'Unknown error')}"
+    except asyncio.TimeoutError:
+        return f"Browser task timed out after {timeout}s."
+    except Exception as e:
+        return f"Browser bridge error: {e}"
+    finally:
+        _bridge_responses.pop(task_id, None)
+
+
 @app.get("/api/models")
 async def list_models():
     """Return locally available Ollama models."""
