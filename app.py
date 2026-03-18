@@ -218,7 +218,7 @@ _TOOL_KEYWORD_MAP = {
     "property_lookup": [
         "property", "listing", "look up", "address", "zillow", "redfin",
         "realtor", "mls", "beds", "baths", "sqft", "days on market",
-        "how much is", "what's listed",
+        "how much is", "what's listed", "zillow.com", "redfin.com", "realtor.com",
     ],
     "client_memory": [
         "client", "clients", "ingest", "conversations", "transcripts",
@@ -228,6 +228,7 @@ _TOOL_KEYWORD_MAP = {
     "browser": [
         "browse", "search the web", "go to", "open url",
         "web search", "look up online", "scrape", "website",
+        "http://", "https://",
     ],
     # --- Retained general tools ---
     "weather": [
@@ -338,7 +339,26 @@ def _try_direct_dispatch(text: str, memory: "MemoryManager | None" = None) -> tu
         client = m.group(1).strip().rstrip("?.!")
         return ("client_brief", {"client_name": client, "language": _lang})
 
-    # === Property Lookup ===
+    # === Zillow / Redfin / Realtor URL → Property Lookup ===
+    m = re.search(r"(https?://(?:www\.)?(?:zillow|redfin|realtor)\.com/\S+)", text)
+    if m:
+        url = m.group(1).strip().rstrip("?.!,")
+        # Try to extract address from Zillow URL path
+        addr_match = re.search(r"/homedetails/(.+?)/\d+_zpid", url)
+        if addr_match:
+            address = addr_match.group(1).replace("-", " ")
+        else:
+            # Use the URL directly via browser tool
+            return ("browser", {"url": url})
+        return ("property_lookup", {"address": address})
+
+    # === Generic URL → Browser ===
+    m = re.search(r"(https?://\S+)", text)
+    if m:
+        url = m.group(1).strip().rstrip("?.!,")
+        return ("browser", {"url": url})
+
+    # === Property Lookup (by address) ===
     m = re.search(
         r"\b(?:look\s+up|pull\s+up|show\s+me|what(?:'s| is))\s+(?:the\s+)?(?:property|listing|house|home)?\s*"
         r"(?:at|for|on)?\s*(\d+.+)",
