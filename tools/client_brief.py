@@ -172,11 +172,30 @@ def _fetch_property(address: str) -> dict | None:
     return None
 
 
-TRANSLATE_PROMPT = """\
-Translate ALL the following items to Chinese. Keep proper nouns (addresses, names) as-is.
-Return ONLY a valid JSON object with the same keys, values translated to Chinese.
+ZH_COMBINED_PROMPT = """\
+你是一个房地产助手。根据以下客户资料完成两个任务：
 
-{data}
+任务1: 为每个部分写1-2句简洁的中文摘要
+任务2: 将所有英文项目翻译成中文（地址和人名保留原文）
+
+客户资料：
+{client_data}
+
+需要翻译的项目：
+{translate_data}
+
+只返回有效JSON：
+{{
+  "recent_summary": "最近沟通的1-2句中文摘要",
+  "preferences_summary": "客户需求的1-2句中文摘要",
+  "history_summary": "看房历史的1-2句中文摘要",
+  "particularities_summary": "个人细节的1-2句中文摘要",
+  "recent_items": ["翻译后的最近话题"],
+  "must_haves": ["翻译后的必要条件"],
+  "dealbreakers": ["翻译后的排除条件"],
+  "property_notes": ["翻译后的看房备注"],
+  "particularities": ["翻译后的个人细节"]
+}}
 """
 
 STATUS_ZH = {
@@ -216,42 +235,45 @@ def _build_brief(client: dict, property_data: dict | None, lang: str = "en") -> 
     ]
     particularities = v.get("particularities", [])
 
-    # For Chinese mode: translate all raw items in one LLM call
+    # Generate summaries (and translate for Chinese) in ONE LLM call
+    client_json = json.dumps(v, ensure_ascii=False)
+    summaries = {}
+
     if lang == "zh":
-        translate_data = {
+        # Single combined call: translate + summarize
+        translate_data = json.dumps({
             "recent_items": recent_items,
             "must_haves": must_haves,
             "dealbreakers": dealbreakers,
             "property_notes": [p["notes"] for p in prop_history],
             "particularities": particularities,
-        }
+        }, ensure_ascii=False)
         try:
-            translated = _llm_call(
-                TRANSLATE_PROMPT.format(data=json.dumps(translate_data, ensure_ascii=False)),
-                "Translate to Chinese.",
+            combined = _llm_call(
+                ZH_COMBINED_PROMPT.format(client_data=client_json, translate_data=translate_data),
+                "Translate and summarize.",
             )
-            recent_items = translated.get("recent_items", recent_items)
-            must_haves = translated.get("must_haves", must_haves)
-            dealbreakers = translated.get("dealbreakers", dealbreakers)
-            translated_notes = translated.get("property_notes", [])
+            summaries = combined
+            recent_items = combined.get("recent_items", recent_items)
+            must_haves = combined.get("must_haves", must_haves)
+            dealbreakers = combined.get("dealbreakers", dealbreakers)
+            translated_notes = combined.get("property_notes", [])
             for i, note in enumerate(translated_notes):
                 if i < len(prop_history):
                     prop_history[i]["notes"] = note
-            particularities = translated.get("particularities", particularities)
+            particularities = combined.get("particularities", particularities)
         except Exception:
-            pass  # Fall back to English items
+            pass
 
         # Translate status labels
         for p in prop_history:
             p["status"] = STATUS_ZH.get(p["status"], p["status"])
-
-    # Generate summaries via LLM
-    client_json = json.dumps(v, ensure_ascii=False)
-    prompt = SUMMARY_PROMPT.get(lang, SUMMARY_PROMPT["en"])
-    try:
-        summaries = _llm_call(prompt.format(client_data=client_json), "Generate summaries.")
-    except Exception:
-        summaries = {}
+    else:
+        prompt = SUMMARY_PROMPT.get("en", SUMMARY_PROMPT["en"])
+        try:
+            summaries = _llm_call(prompt.format(client_data=client_json), "Generate summaries.")
+        except Exception:
+            pass
 
     brief = {
         "recent_topics": {
