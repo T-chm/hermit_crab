@@ -139,7 +139,9 @@ def _scrape_zillow(address: str) -> dict | None:
     finally:
         if page:
             try:
+                ctx = page.context
                 page.close()
+                ctx.close()
             except Exception:
                 pass
 

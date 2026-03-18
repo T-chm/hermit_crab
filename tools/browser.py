@@ -37,14 +37,12 @@ _USER_AGENT = (
 
 
 def _ensure_browser():
-    """Lazy-init browser with stealth settings. Returns a Page object.
-    Uses the real installed Chrome (channel='chrome') to avoid anti-bot detection.
-    Falls back to bundled Chromium if Chrome is not installed."""
+    """Lazy-init browser. Returns a Page in a fresh context each time
+    to avoid cookie contamination from anti-bot CAPTCHAs."""
     global _playwright, _browser, _context
     if _browser is None:
         from playwright.sync_api import sync_playwright
         _playwright = sync_playwright().start()
-        # Try real Chrome first (trusted by anti-bot), fall back to Chromium
         for launch_opts in [
             {"headless": False, "channel": "chrome", "args": ["--disable-blink-features=AutomationControlled", "--window-position=-2400,-2400"]},
             {"headless": True, "args": ["--disable-blink-features=AutomationControlled"]},
@@ -56,15 +54,16 @@ def _ensure_browser():
                 continue
         if _browser is None:
             raise RuntimeError("Could not launch browser. Install Chrome or run: playwright install chromium")
-        _context = _browser.new_context(
-            user_agent=_USER_AGENT,
-            viewport={"width": 1280, "height": 800},
-            locale="en-US",
-        )
-        _context.add_init_script("""
-            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-        """)
-    return _context.new_page()
+    # Fresh context every time — prevents CAPTCHA cookie contamination
+    ctx = _browser.new_context(
+        user_agent=_USER_AGENT,
+        viewport={"width": 1280, "height": 800},
+        locale="en-US",
+    )
+    ctx.add_init_script("""
+        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+    """)
+    return ctx.new_page()
 
 
 def _simplify_page(page) -> str:
@@ -132,6 +131,8 @@ def execute(args: dict) -> str:
     finally:
         if page:
             try:
+                ctx = page.context
                 page.close()
+                ctx.close()
             except Exception:
                 pass
