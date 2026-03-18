@@ -41,15 +41,18 @@ SYSTEM_PROMPT = (
     "You are Hermit Crab Real Estate Edition, an AI assistant for real estate agents. "
     "You help with client meeting preparation, property research, and daily tasks. "
     "Keep responses brief and conversational unless the user asks for detail. "
-    "IMPORTANT: Only use tools when the user EXPLICITLY asks you to perform an action. "
-    "Never call tools for greetings, questions, or general conversation.\n"
+    "IMPORTANT: Only use tools when the user EXPLICITLY asks you to perform an action "
+    "or shares a URL/link. Never call tools for greetings, questions, or general conversation.\n"
     "TOOL GUIDANCE:\n"
-    "- weather: 'what's the weather in London', 'forecast for Tokyo'. Use brief "
-    "for quick checks, current for detail, forecast for multi-day.\n"
-    "- reminders: 'remind me to follow up with the Doe family', 'show today's tasks'. "
-    "Use add with title and due date.\n"
-    "- notes: 'take a note about the Oak Lane showing', 'list my notes'. "
-    "Use create with title and body.\n"
+    "- browser: Use when the user shares ANY URL or link. Navigates to the page and "
+    "extracts content. Works with any website.\n"
+    "- property_lookup: 'look up 456 Maple Drive', or when user shares a Zillow/Redfin link. "
+    "Extracts property details (price, beds, baths, sqft, etc).\n"
+    "- client_brief: 'prep me for my meeting with [Client]'. Generates meeting briefing card.\n"
+    "- client_memory: 'ingest wechat', 'list clients', 'show [Client]'s preferences'.\n"
+    "- weather: 'what's the weather in London', 'forecast for Tokyo'.\n"
+    "- reminders: 'remind me to follow up with the Doe family', 'show today's tasks'.\n"
+    "- notes: 'take a note about the Oak Lane showing', 'list my notes'.\n"
     "- gmail: 'check my email', 'search emails from John Doe'.\n"
     "- calendar: 'what's on my schedule', 'tomorrow's showings'."
 )
@@ -343,14 +346,20 @@ def _try_direct_dispatch(text: str, memory: "MemoryManager | None" = None) -> tu
     m = re.search(r"(https?://(?:www\.)?(?:zillow|redfin|realtor)\.com/\S+)", text)
     if m:
         url = m.group(1).strip().rstrip("?.!,")
-        # Try to extract address from Zillow URL path
+        address = None
+        # Zillow: /homedetails/786-Lakewood-Dr-Sunnyvale-CA-94089/19493113_zpid/
         addr_match = re.search(r"/homedetails/(.+?)/\d+_zpid", url)
         if addr_match:
             address = addr_match.group(1).replace("-", " ")
-        else:
-            # Use the URL directly via browser tool
-            return ("browser", {"url": url})
-        return ("property_lookup", {"address": address})
+        # Redfin: /CA/Sunnyvale/786-Lakewood-Dr-94089/home/...
+        if not address:
+            addr_match = re.search(r"/([A-Z]{2})/([^/]+)/(\d+[^/]+)/home/", url)
+            if addr_match:
+                address = f"{addr_match.group(3).replace('-', ' ')}, {addr_match.group(2)}, {addr_match.group(1)}"
+        if address:
+            return ("property_lookup", {"address": address})
+        # Fallback: browse the URL directly
+        return ("browser", {"url": url})
 
     # === Generic URL → Browser ===
     m = re.search(r"(https?://\S+)", text)

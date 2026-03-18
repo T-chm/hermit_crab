@@ -175,11 +175,12 @@ class TestDirectDispatch:
         assert "example.com" in result[1]["url"]
 
     def test_redfin_url_dispatch(self):
-        """Redfin URLs should route to browser (no zpid pattern)."""
+        """Redfin URLs should extract address and route to property_lookup."""
         from app import _try_direct_dispatch
         result = _try_direct_dispatch(
             "https://www.redfin.com/CA/Sunnyvale/786-Lakewood-Dr-94089/home/1234567"
         )
         assert result is not None
-        # Redfin URL goes to browser since it doesn't match zpid pattern
-        assert result[0] == "browser"
+        assert result[0] == "property_lookup"
+        assert "786" in result[1]["address"]
+        assert "Sunnyvale" in result[1]["address"]
