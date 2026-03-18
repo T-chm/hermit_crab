@@ -1256,7 +1256,15 @@ function renderPropertyBody(args, result) {
       for (const f of d.features) html += '<span class="prop-feature">' + escapeHtml(f) + '</span>';
       html += '</div>';
     }
-    if (d.description) html += '<div class="prop-desc">' + escapeHtml(d.description.substring(0, 300)) + '</div>';
+    if (d.description) {
+      const desc = d.description;
+      if (desc.length > 200) {
+        const id = 'prop-desc-' + Math.random().toString(36).substring(2, 8);
+        html += '<div class="prop-desc"><span id="' + id + '-short">' + escapeHtml(desc.substring(0, 200)) + '... <a href="#" style="color:#7e57c2;text-decoration:none" onclick="document.getElementById(\'' + id + '-short\').style.display=\'none\';document.getElementById(\'' + id + '-full\').style.display=\'inline\';return false">show more</a></span><span id="' + id + '-full" style="display:none">' + escapeHtml(desc) + ' <a href="#" style="color:#7e57c2;text-decoration:none" onclick="document.getElementById(\'' + id + '-full\').style.display=\'none\';document.getElementById(\'' + id + '-short\').style.display=\'inline\';return false">show less</a></span></div>';
+      } else {
+        html += '<div class="prop-desc">' + escapeHtml(desc) + '</div>';
+      }
+    }
     html += '<div class="prop-meta">';
     if (d.property_type) html += '<span>' + escapeHtml(d.property_type) + '</span>';
     if (d.year_built) html += '<span>Built ' + d.year_built + '</span>';

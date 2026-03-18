@@ -113,7 +113,7 @@ def _scrape_zillow(address: str) -> dict | None:
         # Get description
         desc = page.evaluate("""() => {
             const el = document.querySelector('[data-testid="description"], .comments, .Text-c11n-8-100-2__sc-aiai24-0');
-            return el ? el.innerText.substring(0, 300).trim() : '';
+            return el ? el.innerText.substring(0, 1000).trim() : '';
         }""")
         if desc:
             data["description"] = desc
