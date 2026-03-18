@@ -1,6 +1,7 @@
 """Tests for tools/browser.py and tools/property_lookup.py."""
 
 import json
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -19,16 +20,27 @@ class TestFormatPrice:
 
 
 class TestBrowserTool:
-    def test_no_bridge(self):
-        """Browser tool returns error when bridge not connected."""
+    def test_empty_url(self):
         from tools.browser import execute
-        result = execute({"task": "go to example.com"})
-        assert "bridge" in result.lower() or "not available" in result.lower() or "error" in result.lower() or "not fully started" in result.lower()
-
-    def test_empty_task(self):
-        from tools.browser import execute
-        result = execute({"task": ""})
+        result = execute({"url": ""})
         assert "specify" in result.lower()
+
+    def test_navigate_mocked(self):
+        """Browser navigates and returns simplified page content."""
+        from tools.browser import execute
+
+        mock_page = MagicMock()
+        mock_page.title.return_value = "Example Domain"
+        mock_page.url = "https://example.com"
+        mock_page.evaluate.side_effect = [
+            "This domain is for use in illustrative examples.",  # content
+            {"description": "Example domain"},  # metadata
+        ]
+
+        with patch("tools.browser._ensure_browser", return_value=mock_page):
+            result = execute({"url": "https://example.com"})
+            assert "Example Domain" in result
+            assert "example.com" in result
 
 
 class TestPropertyLookup:
@@ -37,9 +49,9 @@ class TestPropertyLookup:
         assert result["error"] is not None
         assert "address" in result["error"].lower()
 
-    def test_with_mocked_browser(self, monkeypatch):
-        """Mock the browser tool to return simulated Zillow data."""
-        mock_response = json.dumps({
+    def test_with_mocked_zillow(self):
+        """Property lookup with mocked Zillow scraper."""
+        mock_data = {
             "address": "456 Maple Drive, Austin, TX",
             "price": 875000,
             "beds": 4,
@@ -51,32 +63,38 @@ class TestPropertyLookup:
             "features": ["Finished basement", "Fenced yard", "2-car garage"],
             "property_type": "Single Family",
             "year_built": 2018,
-        })
+            "source": "zillow",
+            "url": "https://www.zillow.com/...",
+        }
 
-        import tools.browser
-        monkeypatch.setattr(tools.browser, "execute", lambda args: mock_response)
+        with patch("tools.property_lookup._scrape_zillow", return_value=mock_data):
+            result = json.loads(prop_execute({"address": "456 Maple Drive, Austin TX"}))
+            assert result["error"] is None
+            assert result["price"] == 875000
+            assert result["price_formatted"] == "$875,000"
+            assert result["beds"] == 4
+            assert "Finished basement" in result["features"]
 
-        result = json.loads(prop_execute({"address": "456 Maple Drive, Austin TX"}))
-        assert result["error"] is None
-        assert result["price"] == 875000
-        assert result["price_formatted"] == "$875,000"
-        assert result["beds"] == 4
-        assert "Finished basement" in result["features"]
+    def test_zillow_fails_redfin_fallback(self):
+        """Falls back to Redfin when Zillow fails."""
+        mock_redfin = {
+            "price": 450000,
+            "beds": 3,
+            "baths": 2,
+            "source": "redfin",
+        }
 
-    def test_browser_failure(self, monkeypatch):
-        """Property lookup handles browser failure gracefully."""
-        import tools.browser
-        monkeypatch.setattr(tools.browser, "execute", lambda args: "Browser task failed: extension not connected")
+        with patch("tools.property_lookup._scrape_zillow", return_value=None), \
+             patch("tools.property_lookup._scrape_redfin", return_value=mock_redfin):
+            result = json.loads(prop_execute({"address": "123 Main St"}))
+            assert result["error"] is None
+            assert result["source"] == "redfin"
 
-        result = json.loads(prop_execute({"address": "123 Main St"}))
-        # Should return something parseable, not crash
-        assert "error" in result or "description" in result
-
-    def test_browser_returns_non_json(self, monkeypatch):
-        """Property lookup handles non-JSON browser response."""
-        import tools.browser
-        monkeypatch.setattr(tools.browser, "execute", lambda args: "The property at 123 Main St is listed at $500k with 3 beds")
-
-        result = json.loads(prop_execute({"address": "123 Main St"}))
-        assert result is not None  # Should not crash
-        assert "description" in result or "error" in result
+    def test_all_scrapers_fail(self):
+        """Returns fallback when all scrapers fail."""
+        with patch("tools.property_lookup._scrape_zillow", return_value=None), \
+             patch("tools.property_lookup._scrape_redfin", return_value=None), \
+             patch("tools.browser.execute", return_value="Some page content here"):
+            result = json.loads(prop_execute({"address": "123 Nowhere St"}))
+            assert result is not None
+            assert "address" in result

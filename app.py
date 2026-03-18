@@ -30,10 +30,6 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 _ollama_client: httpx.AsyncClient | None = None
 _cached_index_html: str | None = None
 
-# Browser bridge: page-agent extension communicates via this WebSocket
-_bridge_ws: WebSocket | None = None
-_bridge_responses: dict[str, asyncio.Queue] = {}  # task_id -> Queue for response
-_main_loop: asyncio.AbstractEventLoop | None = None  # set on startup for thread access
 
 # ---------------------------------------------------------------------------
 # Config
@@ -154,8 +150,7 @@ whisper_model = None
 
 @app.on_event("startup")
 async def startup():
-    global whisper_model, _ollama_client, _cached_index_html, _main_loop
-    _main_loop = asyncio.get_running_loop()
+    global whisper_model, _ollama_client, _cached_index_html
     print(f"Loading Whisper '{DEFAULT_WHISPER}' model...")
     whisper_model = whisper.load_model(DEFAULT_WHISPER)
     # Persistent connection pool for all Ollama calls
@@ -1340,65 +1335,6 @@ async def run_agent_loop(
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
-@app.get("/bridge")
-async def bridge_page():
-    """Serve the browser bridge page."""
-    html = Path(__file__).parent / "static" / "bridge.html"
-    return HTMLResponse(html.read_text())
-
-
-@app.websocket("/ws-bridge")
-async def ws_bridge(ws: WebSocket):
-    """WebSocket endpoint for the page-agent browser extension bridge."""
-    global _bridge_ws
-    await ws.accept()
-    _bridge_ws = ws
-    print("[bridge] Extension bridge connected", flush=True)
-    try:
-        while True:
-            msg = await ws.receive()
-            if "text" not in msg:
-                continue
-            data = json.loads(msg["text"])
-            msg_type = data.get("type")
-            task_id = data.get("task_id", "")
-
-            if msg_type == "browser_result" and task_id in _bridge_responses:
-                await _bridge_responses[task_id].put(data)
-            elif msg_type == "browser_status":
-                pass  # Could forward to main WS for progress UI
-    except WebSocketDisconnect:
-        _bridge_ws = None
-        print("[bridge] Extension bridge disconnected", flush=True)
-
-
-async def send_browser_task(task: str, config: dict | None = None, timeout: float = 120) -> str:
-    """Send a browsing task to the page-agent extension via the bridge and await the result."""
-    if _bridge_ws is None:
-        return "Browser bridge not connected. Open http://localhost:8765/bridge in Chrome with the page-agent extension installed."
-
-    task_id = str(uuid.uuid4())
-    queue: asyncio.Queue = asyncio.Queue()
-    _bridge_responses[task_id] = queue
-
-    try:
-        await _bridge_ws.send_json({
-            "type": "browser_task",
-            "task_id": task_id,
-            "task": task,
-            "config": config or {},
-        })
-        result = await asyncio.wait_for(queue.get(), timeout=timeout)
-        if result.get("success"):
-            return result.get("data", "")
-        return f"Browser task failed: {result.get('data', 'Unknown error')}"
-    except asyncio.TimeoutError:
-        return f"Browser task timed out after {timeout}s."
-    except Exception as e:
-        return f"Browser bridge error: {e}"
-    finally:
-        _bridge_responses.pop(task_id, None)
-
 
 @app.get("/api/models")
 async def list_models():

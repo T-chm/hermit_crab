@@ -1,52 +1,121 @@
-"""Browser — web browsing and information extraction via page-agent extension."""
+"""Browser — headless web browsing and content extraction via Playwright."""
 
-import asyncio
+import json
+import re
 
 DEFINITION = {
     "type": "function",
     "function": {
         "name": "browser",
         "description": (
-            "Browse the web using a real browser. Navigate to URLs, extract page "
-            "content, search for information, or interact with web pages. "
-            "Powered by the page-agent browser extension. "
-            "Use for property lookups, web research, or any task needing live web data."
+            "Browse the web using a headless browser. Navigate to URLs and extract "
+            "page content. Use for property lookups, web research, or any task "
+            "needing live web data."
         ),
         "parameters": {
             "type": "object",
             "properties": {
-                "task": {
+                "url": {
                     "type": "string",
-                    "description": (
-                        "Natural language description of what to do in the browser. "
-                        "Examples: 'Go to zillow.com and search for 456 Maple Drive', "
-                        "'Extract the price and details from this property listing', "
-                        "'Search Google for average home prices in Austin TX 2026'."
-                    ),
+                    "description": "URL to navigate to and extract content from.",
                 },
             },
-            "required": ["task"],
+            "required": ["url"],
         },
     },
 }
 
+# Singleton browser instance (lazy-init, reused across calls)
+_playwright = None
+_browser = None
+_context = None
+
+_USER_AGENT = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+)
+
+
+def _ensure_browser():
+    """Lazy-init headless Chromium. Returns a Page object."""
+    global _playwright, _browser, _context
+    if _browser is None:
+        from playwright.sync_api import sync_playwright
+        _playwright = sync_playwright().start()
+        _browser = _playwright.chromium.launch(headless=True)
+        _context = _browser.new_context(
+            user_agent=_USER_AGENT,
+            viewport={"width": 1280, "height": 800},
+            locale="en-US",
+        )
+    return _context.new_page()
+
+
+def _simplify_page(page) -> str:
+    """Extract page content into LLM-friendly text."""
+    title = page.title()
+    url = page.url
+
+    # Extract main text content via JS
+    content = page.evaluate("""() => {
+        // Remove noise elements
+        const remove = ['script', 'style', 'nav', 'footer', 'header', 'noscript', 'iframe'];
+        remove.forEach(tag => {
+            document.querySelectorAll(tag).forEach(el => el.remove());
+        });
+
+        // Get text from main content area or body
+        const main = document.querySelector('main, article, [role="main"], .content, #content');
+        const target = main || document.body;
+
+        // Get visible text, collapse whitespace
+        const text = target.innerText || target.textContent || '';
+        return text.replace(/\\n{3,}/g, '\\n\\n').trim().substring(0, 8000);
+    }""")
+
+    # Extract metadata
+    meta = page.evaluate("""() => {
+        const result = {};
+        const desc = document.querySelector('meta[name="description"]');
+        if (desc) result.description = desc.content;
+        const og = {};
+        document.querySelectorAll('meta[property^="og:"]').forEach(m => {
+            og[m.getAttribute('property').replace('og:', '')] = m.content;
+        });
+        if (Object.keys(og).length) result.og = og;
+        return result;
+    }""")
+
+    parts = [f"Title: {title}", f"URL: {url}"]
+    if meta.get("description"):
+        parts.append(f"Description: {meta['description']}")
+    parts.append(f"\n{content}")
+
+    return "\n".join(parts)
+
 
 def execute(args: dict) -> str:
-    task = args.get("task", "")
-    if not task:
-        return "Please specify a browsing task."
+    url = args.get("url", "").strip()
+    if not url:
+        return "Please specify a URL."
 
-    # execute() runs in a thread via asyncio.to_thread() in app.py.
-    # Use the main event loop reference stored at startup.
+    # Ensure URL has protocol
+    if not url.startswith("http"):
+        url = "https://" + url
+
+    page = None
     try:
-        from app import send_browser_task, _main_loop
-        if _main_loop is None:
-            return "Server not fully started yet. Please try again."
-        future = asyncio.run_coroutine_threadsafe(send_browser_task(task), _main_loop)
-        return future.result(timeout=130)
-    except ImportError:
-        return "Browser bridge not available (app module not loaded)."
-    except TimeoutError:
-        return "Browser task timed out."
+        page = _ensure_browser()
+        page.goto(url, wait_until="domcontentloaded", timeout=15000)
+        # Small wait for dynamic content
+        page.wait_for_timeout(2000)
+        result = _simplify_page(page)
+        return result
     except Exception as e:
         return f"Browser error: {e}"
+    finally:
+        if page:
+            try:
+                page.close()
+            except Exception:
+                pass
