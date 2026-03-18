@@ -221,7 +221,10 @@ _TOOL_KEYWORD_MAP = {
     "property_lookup": [
         "property", "listing", "look up", "address", "zillow", "redfin",
         "realtor", "mls", "beds", "baths", "sqft", "days on market",
-        "how much is", "what's listed", "zillow.com", "redfin.com", "realtor.com",
+        "how much is", "what's listed",
+        "zillow.com", "redfin.com", "realtor.com", "trulia.com",
+        "homes.com", "compass.com", "coldwellbanker.com", "century21.com",
+        "movoto.com", "opendoor.com", "homesnap.com",
     ],
     "client_memory": [
         "client", "clients", "ingest", "conversations", "transcripts",
@@ -311,6 +314,50 @@ def _extract_memory_location(memory: "MemoryManager | None") -> str:
     return ""
 
 
+def _extract_address_from_url(url: str) -> str | None:
+    """Try to extract a street address from a real estate listing URL."""
+    # Zillow: /homedetails/786-Lakewood-Dr-Sunnyvale-CA-94089/19493113_zpid/
+    m = re.search(r"/homedetails/(.+?)/\d+_zpid", url)
+    if m:
+        return m.group(1).replace("-", " ")
+
+    # Redfin: /CA/Sunnyvale/786-Lakewood-Dr-94089/home/...
+    m = re.search(r"/([A-Z]{2})/([^/]+)/(\d+[^/]+)/home/", url)
+    if m:
+        return f"{m.group(3).replace('-', ' ')}, {m.group(2)}, {m.group(1)}"
+
+    # Trulia: /p/ca/sunnyvale/807-piper-ave-94087--1234567
+    m = re.search(r"/p/\w+/\w+/([\w-]+?)--\d+", url)
+    if m:
+        return m.group(1).replace("-", " ")
+
+    # Realtor.com: /realestateandhomes-detail/807-Piper-Ave_Sunnyvale_CA_94087_M...
+    m = re.search(r"/realestateandhomes-detail/([^/]+?)_M\d+", url)
+    if m:
+        return m.group(1).replace("-", " ").replace("_", ", ")
+
+    # Compass: /listing/807-piper-ave-sunnyvale-ca-94087/...
+    m = re.search(r"/listing/([\w-]+?)(?:/|$)", url)
+    if m:
+        addr = m.group(1).replace("-", " ")
+        if any(c.isdigit() for c in addr[:5]):  # starts with street number
+            return addr
+
+    # Homes.com: /property/807-piper-ave-sunnyvale-ca-94087/...
+    m = re.search(r"/property/([\w-]+?)(?:/|$)", url)
+    if m:
+        addr = m.group(1).replace("-", " ")
+        if any(c.isdigit() for c in addr[:5]):
+            return addr
+
+    # Generic: look for address-like pattern in URL path (number + street)
+    m = re.search(r"/(\d+[-\w]+-(?:ave|st|dr|ln|ct|blvd|way|rd|pl|cir)[-\w]*)", url, re.IGNORECASE)
+    if m:
+        return m.group(1).replace("-", " ")
+
+    return None
+
+
 def _try_direct_dispatch(text: str, memory: "MemoryManager | None" = None) -> tuple[str, dict] | None:
     """Try to extract a direct tool call from the user message without LLM.
     Returns (tool_name, args) or None if ambiguous."""
@@ -342,23 +389,18 @@ def _try_direct_dispatch(text: str, memory: "MemoryManager | None" = None) -> tu
         client = m.group(1).strip().rstrip("?.!")
         return ("client_brief", {"client_name": client, "language": _lang})
 
-    # === Zillow / Redfin / Realtor URL → Property Lookup ===
-    m = re.search(r"(https?://(?:www\.)?(?:zillow|redfin|realtor)\.com/\S+)", text)
+    # === Real estate platform URLs → Property Lookup ===
+    _RE_DOMAINS = (
+        r"zillow|redfin|realtor|trulia|homes|compass|coldwellbanker"
+        r"|century21|movoto|opendoor|offerpad|homesnap"
+    )
+    m = re.search(rf"(https?://(?:www\.)?(?:{_RE_DOMAINS})\.com/\S+)", text)
     if m:
         url = m.group(1).strip().rstrip("?.!,")
-        address = None
-        # Zillow: /homedetails/786-Lakewood-Dr-Sunnyvale-CA-94089/19493113_zpid/
-        addr_match = re.search(r"/homedetails/(.+?)/\d+_zpid", url)
-        if addr_match:
-            address = addr_match.group(1).replace("-", " ")
-        # Redfin: /CA/Sunnyvale/786-Lakewood-Dr-94089/home/...
-        if not address:
-            addr_match = re.search(r"/([A-Z]{2})/([^/]+)/(\d+[^/]+)/home/", url)
-            if addr_match:
-                address = f"{addr_match.group(3).replace('-', ' ')}, {addr_match.group(2)}, {addr_match.group(1)}"
+        address = _extract_address_from_url(url)
         if address:
             return ("property_lookup", {"address": address})
-        # Fallback: browse the URL directly
+        # Can't extract address — browse the URL and extract from page content
         return ("browser", {"url": url})
 
     # === Generic URL → Browser ===

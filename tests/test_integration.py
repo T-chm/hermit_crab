@@ -184,3 +184,40 @@ class TestDirectDispatch:
         assert result[0] == "property_lookup"
         assert "786" in result[1]["address"]
         assert "Sunnyvale" in result[1]["address"]
+
+    def test_trulia_url_dispatch(self):
+        from app import _try_direct_dispatch
+        result = _try_direct_dispatch(
+            "https://www.trulia.com/p/ca/sunnyvale/807-piper-ave-94087--1234567"
+        )
+        assert result is not None
+        assert result[0] == "property_lookup"
+        assert "807" in result[1]["address"]
+
+    def test_realtor_url_dispatch(self):
+        from app import _try_direct_dispatch
+        result = _try_direct_dispatch(
+            "https://www.realtor.com/realestateandhomes-detail/807-Piper-Ave_Sunnyvale_CA_94087_M12345"
+        )
+        assert result is not None
+        assert result[0] == "property_lookup"
+        assert "807" in result[1]["address"]
+        assert "Sunnyvale" in result[1]["address"]
+
+    def test_compass_url_dispatch(self):
+        from app import _try_direct_dispatch
+        result = _try_direct_dispatch(
+            "https://www.compass.com/listing/807-piper-ave-sunnyvale-ca-94087/abc123"
+        )
+        assert result is not None
+        assert result[0] == "property_lookup"
+        assert "807" in result[1]["address"]
+
+    def test_homes_url_dispatch(self):
+        from app import _try_direct_dispatch
+        result = _try_direct_dispatch(
+            "https://www.homes.com/property/807-piper-ave-sunnyvale-ca/abc123"
+        )
+        assert result is not None
+        assert result[0] == "property_lookup"
+        assert "807" in result[1]["address"]
