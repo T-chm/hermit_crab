@@ -1326,7 +1326,8 @@ function renderClientBriefBody(args, result) {
       if (sec.key === 'property_history' && data.items) {
         html += '<div class="cb-items">';
         for (const p of data.items) {
-          const statusColor = p.status === 'rejected' ? '#ef5350' : p.status === 'liked' ? '#4caf50' : '#ffa726';
+          const s = (p.status || '').toLowerCase();
+          const statusColor = (s === 'rejected' || s === '已拒绝') ? '#ef5350' : (s === 'liked' || s === '感兴趣') ? '#4caf50' : '#ffa726';
           html += '<div class="cb-item"><span style="color:' + statusColor + ';font-weight:600">' + escapeHtml(p.status || '') + '</span> ';
           html += escapeHtml(p.address || '') + (p.notes ? ' — ' + escapeHtml(p.notes) : '') + '</div>';
         }

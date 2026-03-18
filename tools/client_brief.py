@@ -172,6 +172,22 @@ def _fetch_property(address: str) -> dict | None:
     return None
 
 
+TRANSLATE_PROMPT = """\
+Translate ALL the following items to Chinese. Keep proper nouns (addresses, names) as-is.
+Return ONLY a valid JSON object with the same keys, values translated to Chinese.
+
+{data}
+"""
+
+STATUS_ZH = {
+    "rejected": "已拒绝",
+    "liked": "感兴趣",
+    "shown": "已看房",
+    "pending": "待看房",
+    "scheduled": "已安排",
+}
+
+
 def _build_brief(client: dict, property_data: dict | None, lang: str = "en") -> dict:
     """Build the brief JSON output."""
     v = client.get("vectors", {})
@@ -185,6 +201,50 @@ def _build_brief(client: dict, property_data: dict | None, lang: str = "en") -> 
         hi = f"${prefs['budget_max']//1000}k" if prefs.get("budget_max") else "?"
         budget_str = f"{lo} - {hi}"
 
+    # Raw items from profile
+    recent_items = [t.get("summary", "") for t in v.get("recent_topics", [])[-5:]]
+    must_haves = prefs.get("must_haves", [])
+    dealbreakers = prefs.get("dealbreakers", [])
+    locations = prefs.get("locations", [])
+    prop_history = [
+        {
+            "address": p.get("address", ""),
+            "status": p.get("status", ""),
+            "notes": p.get("notes", ""),
+        }
+        for p in v.get("property_history", [])
+    ]
+    particularities = v.get("particularities", [])
+
+    # For Chinese mode: translate all raw items in one LLM call
+    if lang == "zh":
+        translate_data = {
+            "recent_items": recent_items,
+            "must_haves": must_haves,
+            "dealbreakers": dealbreakers,
+            "property_notes": [p["notes"] for p in prop_history],
+            "particularities": particularities,
+        }
+        try:
+            translated = _llm_call(
+                TRANSLATE_PROMPT.format(data=json.dumps(translate_data, ensure_ascii=False)),
+                "Translate to Chinese.",
+            )
+            recent_items = translated.get("recent_items", recent_items)
+            must_haves = translated.get("must_haves", must_haves)
+            dealbreakers = translated.get("dealbreakers", dealbreakers)
+            translated_notes = translated.get("property_notes", [])
+            for i, note in enumerate(translated_notes):
+                if i < len(prop_history):
+                    prop_history[i]["notes"] = note
+            particularities = translated.get("particularities", particularities)
+        except Exception:
+            pass  # Fall back to English items
+
+        # Translate status labels
+        for p in prop_history:
+            p["status"] = STATUS_ZH.get(p["status"], p["status"])
+
     # Generate summaries via LLM
     client_json = json.dumps(v, ensure_ascii=False)
     prompt = SUMMARY_PROMPT.get(lang, SUMMARY_PROMPT["en"])
@@ -197,32 +257,25 @@ def _build_brief(client: dict, property_data: dict | None, lang: str = "en") -> 
         "recent_topics": {
             "title": titles["recent_topics"],
             "summary": summaries.get("recent_summary", ""),
-            "items": [t.get("summary", "") for t in v.get("recent_topics", [])[-5:]],
+            "items": recent_items,
         },
         "preferences": {
             "title": titles["preferences"],
             "summary": summaries.get("preferences_summary", ""),
             "budget": budget_str,
-            "must_haves": prefs.get("must_haves", []),
-            "dealbreakers": prefs.get("dealbreakers", []),
-            "locations": prefs.get("locations", []),
+            "must_haves": must_haves,
+            "dealbreakers": dealbreakers,
+            "locations": locations,
         },
         "property_history": {
             "title": titles["property_history"],
             "summary": summaries.get("history_summary", ""),
-            "items": [
-                {
-                    "address": p.get("address", ""),
-                    "status": p.get("status", ""),
-                    "notes": p.get("notes", ""),
-                }
-                for p in v.get("property_history", [])
-            ],
+            "items": prop_history,
         },
         "particularities": {
             "title": titles["particularities"],
             "summary": summaries.get("particularities_summary", ""),
-            "items": v.get("particularities", []),
+            "items": particularities,
         },
     }
 
